@@ -100,7 +100,7 @@ RET
 
   STH2r INC2 LDA ToShort
   ;unicode-layout/cury LDA2k ROT2 ADD2 SWP2 STA2
-  
+
   ( and at the end, check if there are more codepoints to render )
   STHr #01 SUB #00 NEQk NIP ,&advance-readptr--con0 JCN
     POP POP2 RET
