@@ -5,6 +5,16 @@
   #0a .Console/out DEO
 RET
 %P { ;print-twoshort CALL }
+@print-twoshort-r
+  STH2r
+  STH2r STH2r DUP2 STH2 OVR2 STH2
+  SWP ;print-hex CALL ;print-hex CALL
+  LIT "* .Console/out DEO
+  SWP ;print-hex CALL ;print-hex CALL
+  #0a .Console/out DEO
+  STH2
+RET
+%R { ;print-twoshort-r CALL }
 %LL { #0a LIT "- .Console/out DEO .Console/out DEO }
 
 
@@ -52,18 +62,17 @@ RET
   ( we presume there is at least one codepoint to render - otherwise
     don't call us! )
 
-  STHk #01 SUB STHk
-  ToPosShort
-  ;unicode-stream/gmdoff LDA
+  STHk #01 SUB ToPosShort DUP2
+  ;unicode-stream/gmdoff ADD2 LDA
   ToPosShort
   ;unifont-glyphmetadata ADD2
   STH2
-( stack: len off glyphptr* // )
+( stack: len glyphptr* // off* )
 
   ( first, ensure the glyph, later on grapheme cluster/render unit, can
     fit into the rendering field )
   ;unicode-layout/curx LDA2
-  STH2kr LObbw ADD2 LDA2 ADD ToShort
+  STH2kr LObbw ADD2 LDA2 ( <- pulls both bbw and bbxoff ) ADD ToShort
   ADD2
   ;unicode-layout/maxx LDA2 GTH2 #01 EOR ,&fits-in-x JCN
     ;unicode-layout/beginx LDA2 ;unicode-layout/curx STA2
@@ -76,21 +85,23 @@ RET
   ;unicode-layout/curx LDA2
   STH2kr LObbxoff ADD2 LDA ToShort
   ADD2
-( stack: len off glyphptr* // curx* )
+( stack: len glyphptr* // off* curx* )
+  OVR2 #20 SFT2 ;unicode-stream/pos-xy ADD2 STA2
 
   ;unicode-layout/cury LDA2
   STH2kr LObbh ADD2 LDA2 ADD ToShort
   SUB2
-( stack: len off glyphptr* // curx* cury* )
+( stack: len glyphptr* // off* cury* )
                           ( this is the location from which drawing begins )
+  OVR2 #20 SFT2 ;unicode-stream/pos-xy ADD2 INC2 INC2 STA2
 
   ( third, get the dimensions of the glyph bitmap )
-  STH2kr LObbw ADD2 LDA #07 ADD #03 SFT ( glyph width in octets of bitmaps )
   STH2kr LObbh ADD2 LDA                 ( glyph height in rows of octets )
-( stack: len off glyphptr* // curx* cury* glyph-w glyph-h )
+  STH2kr LObbw ADD2 LDA #07 ADD #03 SFT ( glyph width in octets of bitmaps )
+( stack: len glyphptr* // off* glyph-h glyph-w )
+  OVR2 ;unicode-stream/bbw ADD2 STAk ROT POP INC2 STA
 
   ( finally, draw the glyph )
-  ROTr STHr
   ;draw CALL
 ( stack: len glyphptr* // )
 
@@ -100,10 +111,12 @@ RET
 
   STH2r INC2 LDA ToShort
   ;unicode-layout/cury LDA2k ROT2 ADD2 SWP2 STA2
+( stack: len // )
 
   ( and at the end, check if there are more codepoints to render )
-  STHr #01 SUB #00 NEQk NIP ,&advance-readptr--con0 JCN
-    POP POP2 RET
+  STHr #01 SUB
+  DUP #00 NEQ ,&advance-readptr--con0 JCN
+    POP RET
   &advance-readptr--con0
     STH
   ;unicode-layouter JMP2

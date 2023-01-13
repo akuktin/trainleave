@@ -1,26 +1,32 @@
 %inc-x { .Screen/x DEI2k INC2 ROT DEO2 }
 %inc-y { .Screen/y DEI2k INC2 ROT DEO2 }
 
-@draw ( curx* cury* glyph-w glyph-h codeoff -- )
+@draw ( codeoff* -- )
 
   ( pure software implementation )
 
-  DUP ToPosShort ;unicode-stream/class ADD2 LDA
+  DUP2 ;unicode-stream/class ADD2 LDA
   #00 NEQ ,&process JCN
-    POP POP2 POP2 POP2 RET
+    POP2 RET
   &process
-  STH
 
-( stack: codeoff // curx* cury* glyph-w glyph-h )
+  DUP2
+  ;unicode-stream/bbw ADD2 LDAk
+  STH INC2 LDA STH
 
-  SWP2 .Screen/y DEO2
-  SWP2 DUP2 STH2 .Screen/x DEO2
-( stack: codeoff og-x* // glyph-w glyph-h )
-
-  ;layouter-datasets/d1
-  ROTr STHr ToPosShort ;unicode-stream/bmpoff ADD2
+  DUP2
+  ;unicode-stream/bmpoff ADD2
+  ;layouter-datasets/d1  SWP2
   ;scroll-dataset/bitmap CALL
-  SWP2
+  STH2r
+  ROT2
+
+  ;unicode-stream/pos-xy ADD2 LDA2k
+  STH2k .Screen/x DEO2
+  INC2 INC2 LDA2
+  .Screen/y DEO2
+
+
 ( stack: og-x* // bitmapptr* glyph-w glyph-h )
 
   &draw-glyph
