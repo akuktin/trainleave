@@ -1,0 +1,131 @@
+|00 @System  [ &vector $2 &pad0 $6 &r $2 &g $2 &b $2 &debug $1 &state $1 ]
+|10 @Console [ &vector $2 &in $1 &pad0 $5 &out $1 &err $1 ]
+|20 @Screen  [ &vector $2 &width $2 &height $2 &auto $1 &pad0 $1
+               &x $2 &y $2 &addr $2 &pixel $1 &sprite $1 ]
+|80 @Controller [ &vector $2 &button $1 &key $1 ]
+|90 @Mouse   [ &vector $2 &x $2 &y $2 &state $1 &pad0 $3
+               &scrollx $2 &scrolly $2 ]
+|a0 @FS0     [ &vector $2 &success $2 &stat $2 &delete $1 &append $1
+               &name $2 &length $2 &read $2 &write $2 ]
+|b0 @FS1     [ &vector $2 &success $2 &stat $2 &delete $1 &append $1
+               &name $2 &length $2 &read $2 &write $2 ]
+
+%CALL { JSR2 }
+%RET { JMP2r }
+%echo  { ;echo  CALL }
+%echon { ;echon CALL }
+%ToShort    { ;to-short CALL }
+%ToPosShort { #00 SWP }
+%ToNegShort { #ff SWP }
+%CR    { #0d .Console/out DEO }
+%LF    { #0a .Console/out DEO }
+%CRLF  { CR LF }
+
+%PrintA { #0a .Console/out LIT "A .Console/out DEO DEO }
+
+|0010
+
+|0100
+  #2ce9 .System/r DEO2
+  #01c0 .System/g DEO2
+  #2ce5 .System/b DEO2
+  ;on-controller .Controller/vector DEO2
+
+  ;print-hex/upcase CALL
+  ;unicode-layout/sizeup CALL
+  ;on-console .Console/vector DEO2
+BRK
+
+@on-controller
+  .Controller/key DEI
+    DUP ;print-hex/paren CALL
+  DUP LIT "q EQU
+  ,&kill-thyself JCN
+  ;utf8decode-octet CALL
+  BRK
+  &kill-thyself
+  POP
+  #01 .System/state DEO
+BRK
+
+@on-console
+  .Console/in DEI
+  ;utf8decode-octet CALL
+BRK
+
+~print-unicode.tal
+
+%unicode-stream-size { #10 }
+@unicode-stream [
+  ( all $ values are in hexadecimal )
+  [
+    &startx     ( start position for rendering in x )
+             $2   ( 1 * 2 )
+    &starty     ( start position for rendering in y )
+             $2   ( 1 * 2 )
+  ]
+  [
+    &class      ( codepoint class )
+            $10   ( 16 * 1 )
+    &gmdoff     ( glyph metadata offset )
+    &bbw          ( doubles as the x size of the bitmap )
+            $10   ( 16 * 1 )
+    &bbh        ( y size of the bitmap )
+            $10   ( 16 * 1 )
+    &pos-xy     ( position in x and y from where to begin rendering glyph )
+            $40   ( 16 * (2*2) )
+    &bmpoff     ( bitmap offset )
+            $40   ( 16 * 4 )
+  ]
+]
+
+~utf8-decode.tal
+~unicode-combiner.tal
+~unicode-layouter.tal
+~unicode-renderer.tal
+
+@echo ( addr* -- ) ( null terminated strings!!! )
+  LDAk #00 EQUk NIP ,&end JCN
+  .Console/out DEO INC2 ,echo JMP
+  &end
+  POP POP2
+RET
+@echon ( addr* len -- ) ( safer than echo() )
+  #00 EQUk NIP ,&end JCN
+  #01 SUB STH
+  LDAk .Console/out DEO INC2
+  STHr ,echon JMP
+  &end
+  POP POP2
+RET
+@print-hex ( char -- ) ( print an octet in hexdec )
+  &entry
+  DUP #04 SFT #30 ADD #3a LTHk NIP ,&print-high JCN
+  LIT &_dp0 27 ADD
+  &print-high .Console/out DEO
+  #0f AND #30 ADD #3a LTHk NIP ,&print-low JCN
+  LIT &_dp1 27 ADD
+  &print-low .Console/out DEO
+  RET
+  &paren               ( surround the hexdec in parentheses )
+  LIT "( .Console/out DEO
+  ,&entry JSR
+  LIT ") .Console/out DEO
+  #0a .Console/out DEO
+  RET
+                       ( reconfigure print-hex to print in upper or lower case )
+  &upcase   #07 DUP ,&_dp0 STR ,&_dp1 STR RET
+  &downcase #27 DUP ,&_dp0 STR ,&_dp1 STR RET
+RET
+
+@to-short ( byte -- short* )
+  DUP #80 LTH ,&positive JCN
+    #ff ,&common JMP
+  &positive
+    #00
+  &common
+    SWP
+RET
+
+
+~unicode-datasets.tal

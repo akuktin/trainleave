@@ -1,0 +1,179 @@
+@print-twoshort
+  OVR2 SWP ;print-hex CALL ;print-hex CALL
+  LIT "- .Console/out DEO
+  DUP2 SWP ;print-hex CALL ;print-hex CALL
+  #0a .Console/out DEO
+RET
+%P { ;print-twoshort CALL }
+%LL { #0a LIT "- .Console/out DEO .Console/out DEO }
+
+
+(
+@layouter-codepointmap-dataset [
+  &class $1 &glyphmetadata-offset $3
+  &bitmap-offset $4 ( top $2 is which file, bottom $2 is offset in file )
+]
+@layouter-glyphmetadata-dataset [
+  &dwidthx $1 &dwidthy $1
+  &bbw     $1 &bbxoff  $1
+  &bbh     $1 &bbyoff  $1
+  &pad0 $2
+]
+)
+@unifont-glyphmetadata
+  1000 1000 10fe 0000  0800 0800 10fe 0000
+@unifont-bitmap-pfx   "bitmap.unifont. &code "0000  00
+@unifont-codechar-pfx "codechar.unifont &code-offset ". &code "00 00
+
+
+
+
+@unicode-layout
+  &sizeup ( -- )
+          .Screen/height DEI2 ,&maxy STR2
+          .Screen/width  DEI2 ,&maxx STR2 RET
+  [ &advancex 0010 &advancey 0010   ( obsolete, to be calculated according
+                                      to data from the font )
+    &globbbx  0010 &globbby  0010 ( global bounding box for the entire font )
+    &beginx   0006 &beginy   0006
+    &posx     0006 &posy     0006   ( position of the render unit's origin
+                                      on the screen )
+    &maxx     ffff &maxy     ffff ]
+  &curx     0110 &cury 0020 ( position of the glyph's origin on the screen )
+%LObbw { #0002 }
+%LObbh { #0004 }
+%LObbxoff { #0003 }
+%LObbyoff { #0005 }
+%LObitmap { #0006 }
+@unicode-layouter ( len -- )
+( this is just a passthrought implementation to enable faster development
+  of the entire rendering pipeline )
+
+  ( we presume there is at least one codepoint to render - otherwise
+    don't call us! )
+
+  STHk #01 SUB STHk
+  ToPosShort
+  ;unicode-stream/gmdoff LDA
+  ToPosShort
+  ;unifont-glyphmetadata ADD2
+  STH2
+( stack: len off glyphptr* // )
+
+  ( first, ensure the glyph, later on grapheme cluster/render unit, can
+    fit into the rendering field )
+  ;unicode-layout/curx LDA2
+  STH2kr LObbw ADD2 LDA2 ADD ToShort
+  ADD2
+  ;unicode-layout/maxx LDA2 GTH2 #01 EOR ,&fits-in-x JCN
+    ;unicode-layout/beginx LDA2 ;unicode-layout/curx STA2
+    ;unicode-layout/cury DUP2 LDA2
+    ;unicode-layout/globbby LDA2
+    ADD2 SWP2 STA2
+  &fits-in-x
+
+  ( second, determine the location from which rendering will be done )
+  ;unicode-layout/curx LDA2
+  STH2kr LObbxoff ADD2 LDA ToShort
+  ADD2
+( stack: len off glyphptr* // curx* )
+
+  ;unicode-layout/cury LDA2
+  STH2kr LObbh ADD2 LDA2 ADD ToShort
+  SUB2
+( stack: len off glyphptr* // curx* cury* )
+                          ( this is the location from which drawing begins )
+
+  ( third, get the dimensions of the glyph bitmap )
+  STH2kr LObbw ADD2 LDA #07 ADD #03 SFT ( glyph width in octets of bitmaps )
+  STH2kr LObbh ADD2 LDA                 ( glyph height in rows of octets )
+( stack: len off glyphptr* // curx* cury* glyph-w glyph-h )
+
+  ( finally, draw the glyph )
+  ROTr STHr
+  ;draw CALL
+( stack: len glyphptr* // )
+
+  ( fourth, advance the draw "cursor" )
+  STH2kr LDA ToShort
+  ;unicode-layout/curx LDA2k ROT2 ADD2 SWP2 STA2
+
+  STH2r INC2 LDA ToShort
+  ;unicode-layout/cury LDA2k ROT2 ADD2 SWP2 STA2
+  
+  ( and at the end, check if there are more codepoints to render )
+  STHr #01 SUB #00 NEQk NIP ,&advance-readptr--con0 JCN
+    POP POP2 RET
+  &advance-readptr--con0
+    STH
+  ;unicode-layouter JMP2
+
+( this is actually two different functions that share most of their code )
+@ready-file
+ &codechar  ( pfx -- )
+  ;unifont-codechar-pfx/code-offset STH2
+  ,&common JMP
+ &bitmap    ( pfx* -- )
+  ;unifont-bitmap-pfx/code STH2
+  SWP DUP
+  #04 SFT ,&make-hex JSR STH2kr STA
+  #0f AND ,&make-hex JSR STH2r INC2 STH2k STA
+  &common
+  DUP
+  #04 SFT ,&make-hex JSR STH2r INC2 STH2k STA
+  #0f AND ,&make-hex JSR STH2r INC2 STA
+  RET
+  &make-hex
+    #30 ADD #3a LTHk NIP ,&do-ret JCN
+    LIT 27 ADD
+    &do-ret
+RET
+
+%get-scroll-window { #1000 }
+%get-scroll-mask   { #0fff }
+@scroll-dataset
+ &codechar ( buf* ptr* -- ofset-ptr* )
+  STHk LDA STHr INC2 LDA2
+ &codechar-direct ( buf* high low* -- ofset-ptr* )
+  ROT #30 SFT STH OVR #05 SFT STHr ORA
+  ;ready-file/codechar CALL ;unifont-codechar-pfx .FS0/name DEO2
+  #30 SFT2 ,&common JMP
+ &bitmap   ( buf* ptr* -- ofset-ptr* )
+  LDA2k ;ready-file/bitmap CALL ;unifont-bitmap-pfx .FS0/name DEO2
+  INC2 INC2 LDA2 &common
+
+  OVR2 STH2 get-scroll-window .FS0/length DEO2
+  #0000
+
+  &scroll ( buf* want* am* -- ofset-ptr* )
+    STH2kr .FS0/read DEO2
+( BUG FIXME: check FS0/success )
+    DUP2 get-scroll-window ADD2 GTH2k ,&overflow-end JCN
+( stack: buf* want* am* new-am* )
+    NIP2 LTH2k ,&end JCN
+    ,&scroll JMP
+  &overflow-end
+    POP2
+  &end
+    POP2 get-scroll-mask AND2 ADD2 POP2r
+RET
+
+@glyph-bits ( high low* -- bitmapptr* glyphptr* )
+  STH2 STH
+
+( BUG FIXME currently not checking the return value of any file operations! )
+
+  ;layouter-datasets/d0
+  STHr STH2r
+  ;scroll-dataset/codechar-direct CALL
+( stack: codechar-ptr* )
+
+  INC2 INC2 ( this second increment actually violates the datastructure, but
+              I'll probably shorten the field to 1 octet in the end, so this
+              second increment is OK so far... )
+  LDA2k
+  ;layouter-datasets/d1 ROT2 #0002 ADD2 ;scroll-dataset/bitmap CALL
+( stack: glyphmetadata-offset* bitmapptr* )
+
+  SWP2 ;unifont-glyphmetadata ADD2
+RET

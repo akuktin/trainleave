@@ -1,0 +1,87 @@
+@utf8deliver
+(      ;print-unicode-pretty/from-resultmem CALL
+)
+(  ;unicode-consumer-acceptance CALL )
+  ;unicode-combiner JMP2
+RET
+@utf8sanitizer ( performs handling of overlong sequences etc )
+( not optimized )
+( premature optimization is the root of all evil )
+  ( check if the codepoint is within the range of legal values )
+  ,utf8result/high LDR #10 GTH ,&error JCN
+  ( the remainder is only interesting if we're in the BMP )
+  ,utf8result/high LDR #00 NEQ ,&all-fine JCN
+  ( check for surrogates )
+  ,utf8result/mid LDR2 #d800 LTH2 ,&check-overlong JCN
+  ,utf8result/mid LDR2 #e000 LTH2 ,&error JCN
+  ( finally, check for overlong sequences )
+  &check-overlong
+  ( if the length of the sequence is 1, we'll never get called at all )
+  ,utf8parser-octet LDR #03 LTH ,&len-is-2 JCN
+  ,utf8parser-octet LDR #04 LTH ,&len-is-3 JCN
+  ,&error JMP ( this point is reached ONLY if the high octet is 00 )
+  &len-is-2 ,utf8result/mid LDR2 #0080 LTH2 ,&error JCN ,&all-fine JMP
+  &len-is-3 ,utf8result/mid LDR2 #0800 LTH2 ,&error JCN ,&all-fine JMP
+  &all-fine
+  RET
+  &error
+  #00 #fffd ,utf8result/mid STR2 ,utf8result/high STR
+RET
+@utf8parser-octet 00 ( which octet in sequence? )
+@utf8result
+  &reset #0000 #00 ,&high STR ,&mid STR2 RET
+  &high 00 &mid 00 &low 00
+@utf8decode-octet ( octet -- )
+  ,utf8parser-octet LDR
+  DUP #00 EQU ;&initial-octet JCN2
+  &following-octet
+    OVR #c0 AND #80 EQU ,&following-octet-c0 JCN
+    &following-octet-err0
+      POP #00 ,utf8parser-octet STR
+      #fffd #00 ,utf8result/high STR ,utf8result/mid STR2
+      ;utf8deliver CALL
+      ,utf8result/reset JSR ( JSR == near CALL )
+      ,utf8decode-octet JMP ( this octet might be a starter for
+                              a new sequence )
+    &following-octet-c0
+      #10 SUB DUP ,utf8parser-octet STR
+      DUP #10 LTH ,&following-octet-0remaining JCN
+          #20 LTH ,&following-octet-1remaining JCN
+      &following-octet-2remaining
+        DUP #30 AND #04 SFT ,utf8result/high LDR ORA ,utf8result/high STR
+        #40 SFT ,utf8result/mid LDR ORA ,utf8result/mid STR RET
+      &following-octet-1remaining
+        DUP #3c AND #02 SFT ;utf8result/mid LDA ORA ;utf8result/mid STA
+        #60 SFT ;utf8result/low LDA ORA ;utf8result/low STA RET
+      &following-octet-0remaining
+        POP #3f AND ;utf8result/low LDA ORA ;utf8result/low STA
+        ;utf8sanitizer CALL ;utf8deliver CALL
+        ;&reset-resultmem-and-return JMP2
+  &initial-octet
+    POP
+    #80 LTHk ,&only-octet JCN
+    #40 ORA LTHk ,&initial-octet-err1 JCN
+    #20 ORA LTHk ,&two-octets JCN
+    #10 ORA LTHk ,&three-octets JCN
+    #08 ORA LTHk ,&four-octets JCN
+    &initial-octet-err1
+      POP2
+      #fffd #00 ;utf8result/high STA ;utf8result/mid STA2
+      ;utf8deliver CALL
+      ,&reset-resultmem-and-return JMP
+    &only-octet
+      POP ;utf8result/low STA ;utf8deliver CALL ( nothing to sanitize )
+      #00 ;utf8result/low STA RET
+    &two-octets
+      POP #1f AND DUP
+       #02 SFT ;utf8result/mid STA
+       #60 SFT ;utf8result/low STA
+      #12 ;utf8parser-octet STA RET
+    &three-octets
+      POP #40 SFT ;utf8result/mid STA #23 ;utf8parser-octet STA RET
+    &four-octets
+      POP #07 AND #20 SFT ;utf8result/high STA #34 ;utf8parser-octet STA RET
+  &reset-resultmem-and-return
+    #00 ;utf8parser-octet STA
+    ;utf8result/reset CALL
+RET

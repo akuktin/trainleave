@@ -1,0 +1,63 @@
+%inc-x { .Screen/x DEI2k INC2 ROT DEO2 }
+%inc-y { .Screen/y DEI2k INC2 ROT DEO2 }
+
+@draw ( curx* cury* glyph-w glyph-h codeoff -- )
+
+  ( pure software implementation )
+
+  DUP ToPosShort ;unicode-stream/class ADD2 LDA
+  #00 NEQ ,&process JCN
+    POP POP2 POP2 POP2 RET
+  &process
+  STH
+
+( stack: codeoff // curx* cury* glyph-w glyph-h )
+
+  SWP2 .Screen/y DEO2
+  SWP2 DUP2 STH2 .Screen/x DEO2
+( stack: codeoff og-x* // glyph-w glyph-h )
+
+  ;layouter-datasets/d1
+  ROTr STHr ToPosShort ;unicode-stream/bmpoff ADD2
+  ;scroll-dataset/bitmap CALL
+  SWP2
+( stack: og-x* // bitmapptr* glyph-w glyph-h )
+
+  &draw-glyph
+  DUP #00 EQU ,&end JCN
+  #01 SUB STH
+  DUP STH
+( stack: og-x* cur-glyph-h glyph-w // bitmapptr* glyph-w-cnt )
+
+  &draw-one-row
+  DUP #01 SUB LTHk ,&done-one-row JCN
+( stack: og-x* cur-glyph-h glyph-w // bitmapptr* glyph-w-cnt glyph-w-cntnew )
+
+    NIP
+    STH DUP2 INC2 SWP2 LDA STHr
+( stack: og-x* cur-glyph-h glyph-w // bitmapptr* bitmap glyph-w-cnt )
+    SWP #07
+( stack: og-x* cur-glyph-h glyph-w // bitmapptr* glyph-w-cnt bitmap seven )
+
+( top-o-stack: bitmap seven )
+    &run-row-oct
+      DUP2 SFT #01 AND ,&put-pixel JCN ,&done-putting-pixel JMP
+      &put-pixel #01 .Screen/pixel DEO &done-putting-pixel
+( top-o-stack: bitmap seven )
+      inc-x
+      DUP #01 SUB LTHk
+( top-o-stack: bitmap seven newseven testresult )
+      ,&done-row-oct JCN
+      NIP ,&run-row-oct JMP
+      &done-row-oct
+      POP2 POP
+      ,&draw-one-row JMP
+
+  &done-one-row
+  POP2 inc-y STHr STHr
+  STH2kr .Screen/x DEO2
+  ,&draw-glyph JMP
+
+  &end
+  POP2r POP2 POP2
+RET

@@ -1,0 +1,43 @@
+@print-unicode ( high low* -- )
+  LIT "+ LIT "U .Console/out DEO .Console/out DEO
+  ROT DUP #00 EQU ,&print-short JCN
+    DUP ;print-hex CALL
+  &print-short
+  POP SWP ;print-hex CALL ;print-hex CALL
+  RET
+  &from-resultmem
+  ;utf8result/high LDA ;utf8result/mid LDA2
+  ,print-unicode JMP
+@print-unicode-indented ( high low* -- )
+  ROT DUP #00 EQU ,&print-short JCN
+    LIT "+ LIT "U .Console/out DEO .Console/out DEO
+    ;print-hex CALL
+    ,&print-mid JMP
+  &print-short
+    POP #2020 .Console/out DEO .Console/out DEO
+    LIT "+ LIT "U .Console/out DEO .Console/out DEO
+  &print-mid
+    SWP ;print-hex CALL ;print-hex CALL
+  RET
+  &from-resultmem
+  ;utf8result/high LDA ;utf8result/mid LDA2
+  ,print-unicode JMP
+@print-unicode-pretty ( high low* -- )
+  ROT DUP #00 EQU ,&print-short JCN
+    LIT "+ LIT "U .Console/out DEO .Console/out DEO
+    ;print-hex CALL
+    ,&print-mid JMP
+  &print-short
+    POP #2020 .Console/out DEO .Console/out DEO
+    LIT "+ LIT "U .Console/out DEO .Console/out DEO
+  &print-mid
+    SWP ;print-hex CALL ;print-hex CALL
+  ,&chars-printed LDR #01 ADD #09 LTHk NIP ,&continue JCN
+  #0a .Console/out DEO POP #00
+  &continue
+    ,&chars-printed STR
+  RET
+  &chars-printed 00
+  &from-resultmem
+  ;utf8result/high LDA ;utf8result/mid LDA2
+  ,print-unicode-pretty JMP
