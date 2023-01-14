@@ -87,7 +87,9 @@ RET
   INC2 INC2 LDA2 STH2kr #20 SFT2 INC2 INC2 ;unicode-stream/bmpoff ADD2 STA2
 
 ( stack: cnt* // )
-  STH2r ;unicode-stream/class ADD2 LDA
+  STH2r DUP INC ,unicode-combiner-data/cnt STR
+
+  ;unicode-stream/class ADD2 LDA
 ( stack: // class )
 
   ( now analyze the class and maybe do something )
@@ -95,7 +97,13 @@ RET
     #00 NEQ ,&c0 JCN
       RET
     &c0
-      #01 ;unicode-layouter CALL ( this could even be a jump )
+      ,unicode-combiner-data/cnt LDR
+      #01 OVR
+      LTH ,&c1 JCN
+        POP RET
+      &c1
+      ;unicode-layouter CALL
+      #00 ,unicode-combiner-data/cnt STR
 
 RET
 

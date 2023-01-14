@@ -55,6 +55,27 @@ BRK
 
 ~print-unicode.tal
 
+@print-twoshort
+  OVR2 SWP ;print-hex CALL ;print-hex CALL
+  LIT "- .Console/out DEO
+  DUP2 SWP ;print-hex CALL ;print-hex CALL
+  #0a .Console/out DEO
+RET
+%P { ;print-twoshort CALL }
+@print-twoshort-r
+  STH2r
+  STH2r STH2r DUP2 STH2 OVR2 STH2
+  SWP ;print-hex CALL ;print-hex CALL
+  LIT "* .Console/out DEO
+  SWP ;print-hex CALL ;print-hex CALL
+  #0a .Console/out DEO
+  STH2
+RET
+%R { ;print-twoshort-r CALL }
+%LL { #0a LIT "- .Console/out DEO .Console/out DEO }
+
+
+
 %unicode-stream-size { #10 }
 @unicode-stream [
   ( all $ values are in hexadecimal )

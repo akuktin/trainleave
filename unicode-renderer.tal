@@ -10,9 +10,10 @@
     POP2 RET
   &process
 
-  DUP2
-  ;unicode-stream/bbw ADD2 LDAk
-  STH INC2 LDA STH
+  DUP2 ;unicode-stream/bbw ADD2 LDA STH
+  DUP2 ;unicode-stream/bbh ADD2 LDA STH
+
+  #20 SFT2
 
   DUP2
   ;unicode-stream/bmpoff ADD2
