@@ -101,7 +101,7 @@ RET
 ]
 
 ~utf8-decode.tal
-~unicode-combiner.tal
+~unicode-consumer.tal
 ~unicode-layouter.tal
 ~unicode-renderer.tal
 

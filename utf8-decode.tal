@@ -1,8 +1,7 @@
 @utf8deliver
 (      ;print-unicode-pretty/from-resultmem CALL
 )
-(  ;unicode-consumer-acceptance CALL )
-  ;unicode-combiner JMP2
+  ;unicode-consumer JMP2
 RET
 @utf8sanitizer ( performs handling of overlong sequences etc )
 ( not optimized )

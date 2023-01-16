@@ -50,11 +50,11 @@ RET
     replacement space base into the buffer before the mark. )
 RET
 
-@unicode-combiner-data [
+@unicode-consumer-data [
   &cnt 00   ( how many spots are already taken )
 ]
 
-@unicode-combiner ( -- )
+@unicode-consumer ( -- )
 ( this is just a passthrought implementation to enable faster development
   of the entire rendering pipeline )
 
@@ -115,6 +115,6 @@ RET
   ;layouter-datasets/d0
   STHr STH2r
   ;scroll-dataset/codechar-direct CALL
-( stack: codechar-ptr* )
+( stack: codecharptr* )
 
 RET
