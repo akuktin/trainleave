@@ -42,6 +42,7 @@ BRK
   DUP LIT "q EQU
   ,&kill-thyself JCN
   ;utf8decode-octet CALL
+  ;unicode-consumer-flush CALL
   BRK
   &kill-thyself
   POP
@@ -72,6 +73,11 @@ RET
   STH2
 RET
 %R { ;print-twoshort-r CALL }
+@print-short
+  DUP2 SWP ;print-hex CALL ;print-hex CALL
+  #0a .Console/out DEO
+RET
+%PS { ;print-short CALL }
 %LL { #0a LIT "- .Console/out DEO .Console/out DEO }
 
 
@@ -81,8 +87,12 @@ RET
   ( all $ values are in hexadecimal )
   [
     &startx     ( start position for rendering in x )
-             $2   ( 1 * 2 )
+           0100   ( 1 * 2 )
     &starty     ( start position for rendering in y )
+           0010   ( 1 * 2 )
+    &advancex
+             $2   ( 1 * 2 )
+    &advancey
              $2   ( 1 * 2 )
   ]
   [
@@ -100,6 +110,7 @@ RET
   ]
 ]
 
+~file-access.tal
 ~utf8-decode.tal
 ~unicode-consumer.tal
 ~unicode-layouter.tal

@@ -1,0 +1,81 @@
+( this is actually two different functions that share most of their code )
+@ready-file
+ &codechar  ( pfx -- )
+  ;unifont-codechar-pfx/code-offset STH2
+  ,&common JMP
+ &bitmap    ( pfx* -- )
+  ;unifont-bitmap-pfx/code STH2
+  SWP DUP
+  #04 SFT ,&make-hex JSR STH2kr STA
+  #0f AND ,&make-hex JSR STH2r INC2 STH2k STA
+  &common
+  DUP
+  #04 SFT ,&make-hex JSR STH2r INC2 STH2k STA
+  #0f AND ,&make-hex JSR STH2r INC2 STA
+  RET
+  &make-hex
+    #30 ADD #3a LTHk NIP ,&do-ret JCN
+    LIT 27 ADD
+    &do-ret
+RET
+
+%get-scroll-window { #1000 }
+%get-scroll-mask   { #0fff }
+@scroll-dataset
+ &codechar ( buf* ptr* -- ofset-ptr* )
+  STHk LDA STHr INC2 LDA2
+ &codechar-direct ( buf* high low* -- ofset-ptr* ) &ccd
+  ROT #30 SFT STH OVR #05 SFT STHr ORA
+  ;ready-file/codechar CALL ;unifont-codechar-pfx .FS0/name DEO2
+  #30 SFT2 ,&common JMP
+ &bitmap   ( buf* ptr* -- ofset-ptr* )
+  LDA2k ;ready-file/bitmap CALL ;unifont-bitmap-pfx .FS0/name DEO2
+  INC2 INC2 LDA2 &common
+
+  OVR2 STH2 get-scroll-window .FS0/length DEO2
+  #0000
+
+  &scroll ( buf* want* am* -- ofset-ptr* )
+    STH2kr .FS0/read DEO2
+( BUG FIXME: check FS0/success )
+    DUP2 get-scroll-window ADD2 GTH2k ,&overflow-end JCN
+( stack: buf* want* am* new-am* )
+    NIP2 LTH2k ,&end JCN
+    ,&scroll JMP
+  &overflow-end
+    POP2
+  &end
+    POP2 get-scroll-mask AND2 ADD2 POP2r
+RET
+
+@glyph-bits ( high low* -- bitmapptr* glyphptr* )
+  STH2 STH
+
+( BUG FIXME currently not checking the return value of any file operations! )
+
+  ;layouter-datasets/d0
+  STHr STH2r
+  ;scroll-dataset/codechar-direct CALL
+( stack: codechar-ptr* )
+
+  INC2 INC2 ( this second increment actually violates the datastructure, but
+              I'll probably shorten the field to 1 octet in the end, so this
+              second increment is OK so far... )
+  LDA2k
+  ;layouter-datasets/d1 ROT2 #0002 ADD2 ;scroll-dataset/bitmap CALL
+( stack: glyphmetadata-offset* bitmapptr* )
+
+  SWP2 ;unifont-glyphmetadata ADD2
+RET
+
+@code-bits ( high low* -- codecharptr* )
+  STH2 STH
+
+( BUG FIXME currently not checking the return value of any file operations! )
+
+  ;layouter-datasets/d2
+  STHr STH2r
+  ;scroll-dataset/codechar-direct CALL
+( stack: codecharptr* )
+
+RET

@@ -23,8 +23,10 @@
   ROT2
 
   ;unicode-stream/pos-xy ADD2 LDA2k
+  ;unicode-stream/startx LDA2 ADD2
   STH2k .Screen/x DEO2
   INC2 INC2 LDA2
+  ;unicode-stream/starty LDA2 SWP2 SUB2
   .Screen/y DEO2
 
 

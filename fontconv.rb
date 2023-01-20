@@ -1,3 +1,7 @@
+require './ucd_prep0'
+
+Ccc_gc = CCC_GC.new
+
 unifont_raw = File.open('unifont-15.0.01.bdf', 'rb'){|fh|
   fh.read
 }.split(/\r?\n/);
@@ -61,6 +65,31 @@ unifont_chars.to_a.each do |name, desc|
     i
   };
 
+  if klass = Ccc_gc.get(name)
+    if klass_gc = Ccc_gc.gc_sym.index(klass[:gc_sym])
+      klass_gc += 1
+    else
+      klass_gc = 0
+    end
+
+    case klass[:ccc]
+    when 220 # below
+      klass_nsmark = 1
+      dwidthx = 0                            # !!!
+      dwidthy = -4                           # !!!
+    when 230 # above
+      klass_nsmark = 2
+      dwidthx = 0                            # !!!
+      dwidthy = 4                            # !!!
+    else
+      klass_nsmark = 0
+    end
+
+    klass = klass_gc + (klass_nsmark << 5)
+  else
+    klass = 0 # means ignore this glyph
+  end
+
   glyphmetadata=[dwidthx,dwidthy,bbw,bbxoff,bbh,bbyoff,0,0].pack("c*");
   if glyphmetadata_idx = glyphs.index{|g| g == glyphmetadata };
     nil
@@ -68,8 +97,10 @@ unifont_chars.to_a.each do |name, desc|
     glyphmetadata_idx = glyphs.length;
     glyphs << glyphmetadata
   end;
-  glyphmetadata_offset =
-    ((glyphmetadata_idx * 8) & 0xff_ffff) | (0xff << 24);
+  if glyphmetadata_idx >= 0x20
+    raise "too many different glyph metadata combinations!"
+  end
+  glyphmetadata_offset = (glyphmetadata_idx << 3) & 0xff;
 
   bitmap=[desc[:bitmap].join].pack("H*");
   bitmap_len = bitmap.length;
@@ -94,19 +125,20 @@ unifont_chars.to_a.each do |name, desc|
   bitmaps[-1] << bitmap
   bitmaps_taken += bitmap_len
 
-  res = [glyphmetadata_offset, bitmap_offset].pack("i>2");
+  # klass == 0 means to ignore the glyph
+  res = [klass, 0, 0, glyphmetadata_offset, bitmap_offset].pack("c4i>");
   codechars[name] = res
 end; nil
 
 
 bitmaps.each_with_index{|bitmap,idx|
-  fn=sprintf("bitmap.unifont.%04x", idx);
+  fn=sprintf("db/bitmap.unifont.%04x", idx);
   File.open(fn, 'wb'){|fh|
     fh.write(bitmap)
   }
 }; nil
 
-File.open("glyphmetadata.unifont.0000", 'wb'){|fh|
+File.open("db/glyphmetadata.unifont.0000", 'wb'){|fh|
   fh.write(glyphs.join)
 }
 
@@ -114,7 +146,7 @@ bunch=0x2000;
 ((codechars.length/bunch)+(((codechars.length%bunch)>0)?1:0)).times {|i|
   j=i*bunch;
   codes = codechars[Range.new(j, j+(bunch-1))].join;
-  fn=sprintf("codechar.unifont.%02x", i);
+  fn=sprintf("db/codechar.unifont.%02x", i);
   File.open(fn,'wb'){|fh|
     fh.write(codes)
   }
