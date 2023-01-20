@@ -64,6 +64,7 @@ RET
 
   ( overflow protection )
   ,unicode-consumer-data/cnt LDR unicode-stream-size LTH ,&process JCN
+#0a LIT "E .Console/out DEO .Console/out DEO
     ( signal an error - if you can! )
     RET
   &process
@@ -72,36 +73,46 @@ RET
   ;code-bits CALL                              ( this is the dereference )
 ( stack: codecharptr* )
 
-  ,unicode-consumer-data/cnt LDR ToPosShort STH2
+  ,unicode-consumer-data/cnt LDR
+  ;unicode-stream/off LDA ADD unicode-stream-mask AND
+  ToPosShort STH2
 
-( stack: cnt* // codecharptr* )
+( stack: off* // codecharptr* )
   LDAk
-( stack: cnt* // codecharptr* class )
+( stack: off* // codecharptr* class )
+
+(
   DUP #05 SFT #03 AND #00 NEQ ,&process-2 JCN
     STHkr #00 EQU ,&process-2 JCN
-      STHr ;unicode-layouter CALL
-      #00 STHk ,unicode-consumer-data/cnt STR
+P
+      #01 STHkr ;unicode-layouter CALL
+      #00 ,unicode-consumer-data/cnt STR
   &process-2
+)
 
   STH2kr ;unicode-stream/class  ADD2 STA
   #0003 ADD2
   LDAk STH2kr ;unicode-stream/gmdoff ADD2 STA
   INC2
 
-( stack: cnt* // codecharptr* )
+( stack: off* // codecharptr* )
   LDA2k          STH2kr #20 SFT2           ;unicode-stream/bmpoff ADD2 STA2
   INC2 INC2 LDA2 STH2kr #20 SFT2 INC2 INC2 ;unicode-stream/bmpoff ADD2 STA2
 
-( stack: cnt* // )
-  STH2r INC ,unicode-consumer-data/cnt STR POP
+( stack: off* // )
+  POP2r
+  ;unicode-consumer-data/cnt LDAk INC ROT ROT STA
 RET
 
 @unicode-consumer-flush ( -- )
   #00
   ;unicode-consumer-data/cnt LDAk
-  STH STA STHr
+  STH STA STHkr
+( stack: len // len )
   DUP #00 EQU ,&end JCN
-    ;unicode-layouter CALL RET
+    #00 SWP ;unicode-layouter CALL
+    ;unicode-stream/off LDAk STHr ADD unicode-stream-mask AND ROT ROT STA
+    RET
   &end
-  POP
+  POP POPr
 RET

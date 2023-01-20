@@ -1,6 +1,20 @@
 %inc-x { .Screen/x DEI2k INC2 ROT DEO2 }
 %inc-y { .Screen/y DEI2k INC2 ROT DEO2 }
 
+( draws len^ codepoints/glyphs starting from the beginning of the buffer )
+@draw-all ( len -- len )
+  #00 ;unicode-stream/off LDA STH
+  &loop
+    EQUk ,&end JCN
+    DUP STHkr ADD unicode-stream-mask AND ToPosShort
+    ,draw JSR
+    INC
+    ,&loop JMP
+
+  &end
+  POP POPr
+RET
+
 @draw ( codeoff* -- )
 
   ( pure software implementation )

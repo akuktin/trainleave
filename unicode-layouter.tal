@@ -36,20 +36,45 @@
   &advancex 0000
   &advancey 0000 ( for the time being, only take into account
                    the base character )
+  &linbreak 00   ( if 0, then to the left is an x from the line-breaking algo
+                   and only emergency linebreaks are possible; if 1, then :
+                   is to the left and normal linebreaks are possible )
 
 %LObbw { #0002 }
 %LObbh { #0004 }
 %LObbxoff { #0003 }
 %LObbyoff { #0005 }
 %LObitmap { #0006 }
-@unicode-layouter ( len -- )
+@unicode-layouter ( new-linbreak len -- )
 
   ( we presume there is at least one codepoint to render - otherwise
     don't call us! )
+NIP
 
-  STH #00 STHk
-
+  STH #00
   &begin
+  DUP STHkr LTH ,&do-a-loop JCN
+( stack: len // i )
+    POP
+    STHr ;draw-all CALL
+
+    #0000 ;unicode-layout/cur220y STA ;unicode-layout/cur230y STA
+
+    ;unicode-layout/advancex LDA2
+    ;unicode-stream/startx LDA2k
+    ROT2 ADD2 SWP2 STA2
+
+    ;unicode-layout/advancey LDA2
+    ;unicode-stream/starty LDA2k
+    ROT2 ADD2 SWP2 STA2
+
+    POP
+    RET
+
+  &do-a-loop ( na kraju mora da INC i )
+  STHk ;unicode-stream/off LDA ADD unicode-stream-mask AND
+( stack: len i // off )
+
   ToPosShort DUP2
   ;unicode-stream/gmdoff ADD2 LDA
   ToPosShort
@@ -122,26 +147,11 @@
   ;unicode-stream/bbh ADD2 STA
 
   ( finally, draw the glyph )
-  ;draw CALL
+  POP2
 ( stack: len i glyphptr* // )
 
   POP2r
 ( stack: len i // )
 
-  ( and at the end, check if there are more codepoints to render )
-  STHr INC STHr LTHk ,&repeat JCN
-
-    #0000 ;unicode-layout/cur220y STA ;unicode-layout/cur230y STA
-
-    ;unicode-layout/advancex LDA2
-    ;unicode-stream/startx LDA2k
-    ROT2 ADD2 SWP2 STA2
-
-    ;unicode-layout/advancey LDA2
-    ;unicode-stream/starty LDA2k
-    ROT2 ADD2 SWP2 STA2
-
-    POP2 RET
-  &repeat
-    STH STHk
-    ;unicode-layouter/begin JMP2
+  STHr INC
+  ;&begin JMP2

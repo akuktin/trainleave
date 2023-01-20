@@ -83,6 +83,7 @@ RET
 
 
 %unicode-stream-size { #10 }
+%unicode-stream-mask { #0f }
 @unicode-stream [
   ( all $ values are in hexadecimal )
   [
@@ -94,6 +95,10 @@ RET
              $2   ( 1 * 2 )
     &advancey
              $2   ( 1 * 2 )
+  ]
+  [
+    &off        ( beginning of data in buffer ) ( HAS TO BE A POWER OF TWO! )
+             00   ( 1 * 1 )
   ]
   [
     &class      ( codepoint class )
