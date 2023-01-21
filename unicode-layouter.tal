@@ -60,11 +60,13 @@ NIP
 
     #0000 ;unicode-layout/cur220y STA ;unicode-layout/cur230y STA
 
-    ;unicode-layout/advancex LDA2
+    #0000
+    ;unicode-layout/advancex LDA2k STH2 STA2 STH2r
     ;unicode-stream/startx LDA2k
     ROT2 ADD2 SWP2 STA2
 
-    ;unicode-layout/advancey LDA2
+    #0000
+    ;unicode-layout/advancey LDA2k STH2 STA2 STH2r
     ;unicode-stream/starty LDA2k
     ROT2 ADD2 SWP2 STA2
 
@@ -120,6 +122,7 @@ NIP
     STH2kr LObbh ADD2 LDA2 ( <- pulls both bbh and bbyoff ) ADD ToShort
     OVR2 #20 SFT2 ;unicode-stream/pos-xy ADD2 INC2 INC2 STA2
 
+( BUG: advance treba da se zbraja preko svih (osnovnih) karaktera )
     STH2kr     LDA ToShort ;unicode-layout/advancex STA2
     STH2kr INC LDA ToShort ;unicode-layout/advancey STA2
 

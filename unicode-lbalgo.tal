@@ -1,0 +1,121 @@
+@unicode-lbalgo-dataset
+  $2d2 ( == 722 == ((38*38)/2) )
+
+@unicode-lbalgo ( lbclass -- ??? )
+
+RET
+
+
+@unicode-lbalgo-states7
+( PO ULASKU! )
+  ( 1. vrati x )
+( PO POZIVU! )
+  ( 1. proveri da li je desni SP )
+  (   2a. ako jeste, vrati x )
+  (   2b. ako nije, )
+  ( 3. proveri da li je desni B2 )
+  (   4a. ako jeste, )
+  (     5. stavi stanje df )
+  (     6. vrati x )
+  (   4b. ako nije, )
+  (     7. stavi stanje df )
+  (     8. pokreni algoritam ispocetka ) ( znaci, verovatno ce vratiti : )
+RET
+
+@unicode-lbalgo-states6
+( PO ULASKU! )
+  ( 1. vrati x )
+( PO POZIVU! )
+  ( 1. proveri da li je desni SP )
+  (   2a. ako jeste, vrati x )
+  (   2b. ako nije, )
+  ( 3. proveri da li je desni NS )
+  (   4a. ako jeste, )
+  (     5. stavi stanje df )
+  (     6. vrati x )
+  (   4b. ako nije, )
+  (     7. stavi stanje df )
+  (     8. pokreni algoritam ispocetka ) ( znaci, verovatno ce vratiti : )
+RET
+
+@unicode-lbalgo-states5
+( PO ULASKU! )
+  ( 1. postavi stanje s1 )
+  ( 2. proveri da li je desni ZWJ )
+  (   3a. ako jeste, )
+  (     4. zabelezi da vidis ZWJ )
+  ( 5. promeni klasu desnog u AL )
+  ( 6. injektuj CARRIER desno )
+  ( 7. vrati : ) ( ovo je hardkodovano, iz UAX #14 )
+RET
+
+@unicode-lbalgo-states4
+( PO ULASKU! )
+  ( 1. postavi stanje s1 )
+  ( 2. proveri da li je levi ZWJ )
+  (   3a. ako jeste, )
+  (     4. zabelezi da vidis ZWJ )
+  ( 5. promeni klasu levog u AL )
+  ( 6. injektuj CARRIER levo )
+  ( 7. pozovi PO ULASKU novog stanja )
+( ovo hendluje i goli ZWJ )
+RET
+
+@unicode-lbalgo-states3
+( PO ULASKU! )
+  ( 1. vrati x )
+( PO POZIVU! )
+  ( 1. postavi stanje df )
+  ( 2. vrati x )
+RET
+
+@unicode-lbalgo-states2
+( PO ULASKU! )
+  ( 1. vrati x )
+( PO POZIVU! )
+  ( 1. proveri da li je desni SP )
+  (   2a. ako jeste, vrati x )
+  (   2b. ako nije, )
+  (     3. stavi stanje df )
+  (     4. vrati x ) ( ovo je zapravo hardkodovano iz algoritma u UAX #14 )
+RET
+
+@unicode-lbalgo-states1
+( PO ULASKU! )
+  ( 1. pokreni "PO POZIVU!" )
+( PO POZIVU! )
+  ( 1. proveri da li je desni ZWJ )
+  (   2a. ako jeste, )
+  (     3. zabelezi da vidis ZWJ )
+  (     4. zabrani rotaciju )
+  (     5. vrati x )
+  (   2b. ako nije, )
+  ( 6. proveri da li je desni CM )
+  (   7a. ako jeste, )
+  (     8. zabelezi da ne vidis ZWJ )
+  (     9. zabrani rotaciju )
+  (     10. vrati x )
+  (   7b. ako nije, )
+  ( 11. stavi stanje df )
+  ( 12. proveri da li si video ZWJ )
+  (   13a. ako jesi, )
+  (     14. vrati x ) ( takodje hardkodovano )
+  (   13b. ako nisi, )
+  (     15. pocni algoritam ispocetka )
+RET
+
+@unicode-lbalgo-states0
+( PO ULASKU! )
+  ( 1. vrati x )
+( PO POZIVU! )
+  ( 1. proveri da li je desni SP )
+  (   2a. ako jeste, vrati x )
+  (   2b. ako nije, )
+  ( 3. proveri da li je desni (BK|CR|LF|NL|ZW) ) ( ovo je zapravo hardkod )
+  (   4a. ako jeste, )
+  (     5. stavi stanje df )
+  (     6. vrati x )
+  (   4b. ako nije, )
+  (     7. stavi stanje df )
+  (     8. vrati : )
+RET

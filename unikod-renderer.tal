@@ -82,8 +82,8 @@ RET
 
 
 
-%unicode-stream-size { #10 }
-%unicode-stream-mask { #0f }
+%unicode-stream-size { #10 } ( _MUST_ BE A POWER OF TWO! )
+%unicode-stream-mask { #0f } ( MUST BE EQU TO: unicode-stream-size #01 SUB )
 @unicode-stream [
   ( all $ values are in hexadecimal )
   [
@@ -97,7 +97,7 @@ RET
              $2   ( 1 * 2 )
   ]
   [
-    &off        ( beginning of data in buffer ) ( HAS TO BE A POWER OF TWO! )
+    &off        ( beginning of data in buffer ) ( must fit in the size, obv )
              00   ( 1 * 1 )
   ]
   [

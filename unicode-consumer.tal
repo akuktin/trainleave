@@ -74,7 +74,7 @@ RET
 ( stack: codecharptr* )
 
   ,unicode-consumer-data/cnt LDR
-  ;unicode-stream/off LDA ADD unicode-stream-mask AND
+  ;unicode-stream/off LDA PS ADD unicode-stream-mask AND
   ToPosShort STH2
 
 ( stack: off* // codecharptr* )
@@ -109,10 +109,11 @@ RET
   ;unicode-consumer-data/cnt LDAk
   STH STA STHkr
 ( stack: len // len )
-  DUP #00 EQU ,&end JCN
+  DUP #00 EQU ,&no-display JCN
+  ( do-display )
     #00 SWP ;unicode-layouter CALL
     ;unicode-stream/off LDAk STHr ADD unicode-stream-mask AND ROT ROT STA
     RET
-  &end
-  POP POPr
+  &no-display
+    POP POPr
 RET
