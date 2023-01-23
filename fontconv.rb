@@ -186,3 +186,5 @@ bunch=0x2000;
     fh.write(codes)
   }
 }
+
+save_lbrulez

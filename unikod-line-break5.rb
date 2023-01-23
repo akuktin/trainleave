@@ -1,5 +1,13 @@
+# DON'T change the first three members unless you know what you're doing!
+# Actually, the entire array needs to be synchronized with assembly...
+# So don't change anything in this array without knowing what you're doing!
 RelationCodes = [:!, :":", :x,
                  :s0, :s1, :s2, :s3, :s4, :s5, :s6, :s7]
+unless ((RelationCodes[0] == :!) &&
+        (RelationCodes[1] == :":") &&
+        (RelationCodes[2] == :x))
+  raise "if you knew what you were doing, you would have changed this!"
+end
 
 class Multiclass
   def initialize(classes)
@@ -96,6 +104,7 @@ def decode_token(token)
                     "SY", "WJ", "CM", "ZWJ", "RI"])
 
   when "sot"; Multiclass.new(['sot']) # a SUPERspecial class, don't mingle!
+#  when "eot"; Multiclass.new(['eot']) # a SUPERspecial class, don't mingle!
 
   when "(CL|CP),SP*";
   when "B2,SP*";
@@ -110,7 +119,8 @@ end
 
 # Manual maintenance, as per above
 LB_AllClasses = decode_token('Any').get_classes.flatten.uniq.sort
-LB_TotClasses = [LB_AllClasses, decode_token('sot').get_classes].flatten
+LB_TotClasses = [LB_AllClasses,
+                 decode_token('sot').get_classes].flatten
 
 class Pairings
   def initialize
@@ -197,57 +207,88 @@ end
 
 
 def save_lbrulez
-require 'yaml'
+  $stderr.puts("\n--> If it complains about Psych, try first seeing " +
+               "if it produced the result.\n\n")
+  require 'yaml'
 
+  File.write("pairings.yaml", Pairs.output.to_yaml)
 
+  lbalgo_map = Array.new(LB_TotClasses.length)
 
-File.write("pairings.yaml", Pairs.output.to_yaml)
-
-lbalgo_map = Array.new(LB_TotClasses.length)
-
-Pairs.output.each_pair do |left, matchings|
-  idx = LB_TotClasses.index(left)
-  rels = LB_AllClasses.map do |rklass|
-    matchings[rklass]
-  end
-  lbalgo_map[idx] = rels
-end
-
-lbalgo_map = lbalgo_map.flatten.map do |relation|
-  rel = RelationCodes.index(relation)
-  unless rel
-    raise "unknown something or other"
-  end
-  rel
-end
-
-File.open("unicode-lbalgo-map.tal", "wb") do |fh|
-  fh.write("@unicode-lbalgo-map\n")
-  fh.write("  ( row: the LBClass of the left codepoint/sot )\n")
-  fh.write("  ( collumn: the LBClass of the right codepoint )\n")
-
-  section_size = LB_AllClasses.length
-
-  sections = lbalgo_map.length / section_size
-  if lbalgo_map.length > (sections * section_size)
-    sections += 1
-  end
-
-  sections.times do |i|
-    numslen = 0
-    line = "  "
-    line <<
-      (lbalgo_map[Range.new((( i    * section_size)  ),
-                            (((i+1) * section_size)-1))].map do |num|
-         numslen += 1
-         sprintf("%x", num)
-       end.join)
-    if numslen.odd?
-      line << "0"
+  Pairs.output.each_pair do |left, matchings|
+    idx = LB_TotClasses.index(left)
+    rels = LB_AllClasses.map do |rklass|
+      matchings[rklass]
     end
-    line << "\n"
-
-    fh.write(line)
+    lbalgo_map[idx] = rels
   end
-end
+
+  lbalgo_map = lbalgo_map.flatten.map do |relation|
+    rel = RelationCodes.index(relation)
+    unless rel
+      raise "unknown something or other"
+    end
+    rel
+  end
+
+  File.open("unicode-lbalgo-map.tal", "wb") do |fh|
+    fh.write("@unicode-lbalgo-map\n")
+    fh.write("  ( row: the LBClass of the left codepoint/sot )\n")
+    fh.write("  ( collumn by nibble: the LBClass of the right codepoint )\n")
+
+    section_size = LB_AllClasses.length
+
+    sections = lbalgo_map.length / section_size
+    if lbalgo_map.length > (sections * section_size)
+      sections += 1
+    end
+
+    sections.times do |i|
+      numslen = 0
+      line = " "
+      line <<
+        (lbalgo_map[Range.new((( i    * section_size)  ),
+                              (((i+1) * section_size)-1))].map do |num|
+           numslen += 1
+           if numslen.even?
+             sprintf("%x", num)
+           else
+             sprintf(" %x", num)
+           end
+         end.join)
+      if numslen.odd?
+        line << "0"
+      end
+      line << "\n"
+
+      fh.write(line)
+    end
+  end
+
+  File.open("unicode-lbalgo-macros.tal", "wb") do |fh|
+    fh.write(sprintf(
+       "%%ScalerDigit2 { #%04x } ( %d, the length of AllClasses array )\n\n",
+       LB_AllClasses.length, LB_AllClasses.length))
+    fh.write(sprintf(
+       "%%LBCode-x { %02x }\n",
+       RelationCodes.index(:x)))
+    fh.write(sprintf(
+       "%%LBCode-C { %02x } ( Colon -> : )\n",
+       RelationCodes.index(:":")))
+    fh.write(sprintf(
+       "%%LBCode-E { %02x } ( Exclamation Mark -> ! )\n",
+       RelationCodes.index(:!)))
+    fh.write(sprintf(
+       "%%GetLB-LargestRetcode { #%02x }\n",
+       RelationCodes.index(:x)))
+    fh.write(sprintf(
+       "%%GetLB-LargestRelationCode { #%02x }\n\n",
+       RelationCodes.index(RelationCodes[-1])))
+
+    LB_TotClasses.each_with_index do |klass, index|
+      fh.write(sprintf(
+        "%%GetLBClass-%s { #%02x } %%LBClass-%s { %02x }\n",
+        klass.to_s, index, klass.to_s, index))
+    end
+  end
 end

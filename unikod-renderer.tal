@@ -33,6 +33,7 @@
 
   ;print-hex/upcase CALL
   ;unicode-layout/sizeup CALL
+  ;unicode-lbalgo-reset CALL
   ;on-console .Console/vector DEO2
 BRK
 
@@ -117,8 +118,9 @@ RET
 
 ~file-access.tal
 ~utf8-decode.tal
-~unicode-consumer.tal
+~unicode-lbalgo-macros.tal
 ~unicode-lbalgo.tal
+~unicode-consumer.tal
 ~unicode-layouter.tal
 ~unicode-renderer.tal
 
@@ -165,6 +167,6 @@ RET
     SWP
 RET
 
-
+|1000
 ~unicode-lbalgo-map.tal
 ~unicode-datasets.tal

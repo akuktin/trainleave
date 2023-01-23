@@ -64,9 +64,14 @@ RET
 
   ( overflow protection )
   ,unicode-consumer-data/cnt LDR unicode-stream-size LTH ,&process JCN
-#0a LIT "E .Console/out DEO .Console/out DEO
+(    LIT LBCode-x unicode-stream-size ;unicode-layouter CALL
+    #00 ,unicode-consumer-data/cnt STR
+)
+    LIT LBCode-x unicode-stream-size #01 SUB ;unicode-layouter CALL
+    #01 ,unicode-consumer-data/cnt STR
+
     ( signal an error - if you can! )
-    RET
+(    RET )
   &process
 
   ;utf8result/high STH2k LDA STH2r INC2 LDA2
@@ -74,7 +79,7 @@ RET
 ( stack: codecharptr* )
 
   ,unicode-consumer-data/cnt LDR
-  ;unicode-stream/off LDA PS ADD unicode-stream-mask AND
+  ;unicode-stream/off LDA ADD unicode-stream-mask AND
   ToPosShort STH2
 
 ( stack: off* // codecharptr* )
@@ -84,24 +89,15 @@ RET
   STHr ;unicode-lbalgo-data/left-lbclass STA
 ( stack: off* // codecharptr* )
   ;unicode-lbalgo-data/state LDA ToPosShort
-  ;unicode-lbalgo-statecalls ADD2 LDA2 JMP2
+  ;unicode-lbalgo-statecalls ADD2 LDA2 CALL
 ( stack: off* // codecharptr* lb-code )
 
-  DUP LIT ": NEQ ,&cont1 JCN
-    DUP
+  DUP LIT LBCode-x EQU ,&cont1 JCN
     #00 ;unicode-consumer-data/cnt LDAk STH STA STHr
-    ;unicode-layouter CALL
+    ;unicode-layouter CALL #00
   &cont1
-( stack: off* // codecharptr* lb-code )
-
-(
-  DUP #05 SFT #03 AND #00 NEQ ,&process-2 JCN
-    STHkr #00 EQU ,&process-2 JCN
-P
-      #01 STHkr ;unicode-layouter CALL
-      #00 ,unicode-consumer-data/cnt STR
-  &process-2
-)
+  POP
+( stack: off* // codecharptr* )
 
   LDAk
   STH2kr ;unicode-stream/class  ADD2 STA
@@ -118,14 +114,14 @@ P
   ;unicode-consumer-data/cnt LDAk INC ROT ROT STA
 RET
 
-@unicode-consumer-flush ( -- )
+@unicode-consumer-flush ( -- ) ( call it at eot )
   #00
   ;unicode-consumer-data/cnt LDAk
   STH STA STHkr
 ( stack: len // len )
   DUP #00 EQU ,&no-display JCN
   ( do-display )
-    #00 SWP ;unicode-layouter CALL
+    LIT LBCode-E SWP ;unicode-layouter CALL
     ;unicode-stream/off LDAk STHr ADD unicode-stream-mask AND ROT ROT STA
     RET
   &no-display

@@ -24,18 +24,17 @@
   &sizeup ( -- )
           .Screen/height DEI2 ,&maxy STR2
           .Screen/width  DEI2 ,&maxx STR2 RET
-  [ &globbbx  0010 &globbby  0010 ( global bounding box for the entire font )
-    &beginx   0006 &beginy   0006
-    &posx     0006 &posy     0006   ( position of the render unit's origin
-                                      on the screen )
+  [ &lineadvance 0010 ( vertical advance between lines )
+    &minx     0006 &miny     0006
     &maxx     ffff &maxy     ffff ]
-  &curx     0110 &cury 0020 ( position of the glyph's origin on the screen )
 
   &cur220y  00
   &cur230y  00
   &advancex 0000
   &advancey 0000 ( for the time being, only take into account
                    the base character )
+  &originx  0000
+  &originy  0000
   &linbreak 00   ( if 0, then to the left is an x from the line-breaking algo
                    and only emergency linebreaks are possible; if 1, then :
                    is to the left and normal linebreaks are possible )
@@ -56,7 +55,9 @@ NIP
   DUP STHkr LTH ,&do-a-loop JCN
 ( stack: len // i )
     POP
-    STHr ;draw-all CALL
+    STHkr ;draw-all CALL
+    ;unicode-stream/off LDA STHr ADD unicode-stream-mask AND
+    ;unicode-stream/off STA
 
     #0000 ;unicode-layout/cur220y STA ;unicode-layout/cur230y STA
 
@@ -69,6 +70,9 @@ NIP
     ;unicode-layout/advancey LDA2k STH2 STA2 STH2r
     ;unicode-stream/starty LDA2k
     ROT2 ADD2 SWP2 STA2
+
+    #0000 ;unicode-layout/originx STA2
+    #0000 ;unicode-layout/originy STA2
 
     POP
     RET
@@ -86,9 +90,12 @@ NIP
 
   ( first, position the bitmap relative to glyph rendering origin )
 
+  ( calculate the x origin of the bitmap and store it )
   STH2kr LObbxoff ADD2 LDA ToShort
+  ;unicode-layout/originx LDA2 ADD2
   OVR2 #20 SFT2 ;unicode-stream/pos-xy ADD2 STA2
 
+  ( calcuate the y origin of the bitmap, by class, and store it )
   DUP2 ;unicode-stream/class ADD2 LDA
   #05 SFT #03 AND
   #01 LTHk ,&base-char JCN
@@ -104,11 +111,13 @@ NIP
 ( stack: len i glyphptr* // off* cur___y* d-y )
     STH2kr LObbh ADD2 LDA2 ( <- pulls both bbh and bbyoff ) ADD
     ADD ToShort
+    ;unicode-layout/originy LDA2 ADD2
 ( stack: len i glyphptr* // off* cur___y* d-y* )
     STH2 OVR2 STH2r SWP2
 ( stack: len i glyphptr* // off* cur___y* d-y* off* )
     #20 SFT2 ;unicode-stream/pos-xy ADD2 INC2 INC2 STA2
 ( stack: len i glyphptr* // off* cur___y* )
+    ( here we advance the mark's y glyph origin )
     LDAk
     STH2kr INC2 LDA
     ADD
@@ -120,21 +129,35 @@ NIP
   &base-char
     POP2
     STH2kr LObbh ADD2 LDA2 ( <- pulls both bbh and bbyoff ) ADD ToShort
+    ;unicode-layout/originy LDA2 ADD2
     OVR2 #20 SFT2 ;unicode-stream/pos-xy ADD2 INC2 INC2 STA2
 
-( BUG: advance treba da se zbraja preko svih (osnovnih) karaktera )
-    STH2kr     LDA ToShort ;unicode-layout/advancex STA2
-    STH2kr INC LDA ToShort ;unicode-layout/advancey STA2
+    ( get the x advance for the glyph )
+    STH2kr     LDA ToShort
+    ( advance the x of the glyphs in this render unit )
+    DUP2
+    ;unicode-layout/originx  LDA2k ROT2 ADD2 SWP2 STA2
+    ( add up the x advance for the render unit )
+    ;unicode-layout/advancex LDAk2 ROT2 ADD2 SWP2 STA2
+
+    ( get the y advance for the glyph )
+    STH2kr INC LDA ToShort
+    ( advance the y of the glyphs in this render unit )
+    DUP2
+    ;unicode-layout/originy  LDAk2 ROT2 ADD2 SWP2 STA2
+    ( add up the y advance for the render unit )
+    ;unicode-layout/advancey LDAk2 ROT2 ADD2 SWP2 STA2
 
     ( ensure the glyph, later on grapheme cluster/render unit, can
       fit into the rendering field )
     ;unicode-stream/startx LDA2
     STH2kr LObbw ADD2 LDA2 ( <- pulls both bbw and bbxoff ) ADD ToShort
+    ;unicode-layout/originx LDA2 ADD2
     ADD2
     ;unicode-layout/maxx LDA2 GTH2 #01 EOR ,&fits-in-x JCN
-      ;unicode-layout/beginx LDA2 ;unicode-stream/startx STA2
+      ;unicode-layout/minx   LDA2 ;unicode-stream/startx STA2
       ;unicode-stream/starty DUP2 LDA2
-      ;unicode-layout/globbby LDA2
+      ;unicode-layout/lineadvance LDA2
       ADD2 SWP2 STA2
     &fits-in-x
 

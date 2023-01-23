@@ -1,4 +1,24 @@
-%ScalerDigit2 { #0026 } ( 38, the length of AllClasses array )
+@print-lbcode ( code -- )
+  DUP LIT LBCode-x NEQ ,&not-x JCN
+    ;&code-x ;echo CALL
+    POP RET
+  &not-x
+  DUP LIT LBCode-C NEQ ,&not-C JCN
+    ;&code-C ;echo CALL
+    POP RET
+  &not-C
+  DUP LIT LBCode-E NEQ ,&not-E JCN
+    ;&code-E ;echo CALL
+    POP RET
+  &not-E
+    ;&unknown ;echo CALL
+    POP RET
+  &code-x "LBCode-x 0a 00
+  &code-C "LBCode-C 0a 00
+  &code-E "LBCode-E 0a 00
+  &unknown "unknownLBCode 0a 00
+
+
 @calc-lbmap-addr ( high_digit low_digit -- address* )
   STH
   ToPosShort
@@ -7,12 +27,19 @@
 RET
 
 
-%LBCode-x { 02 }
-%LBCode-C { 01 } ( Colon -> : )
-%LBCode-E { 00 } ( Exclamation mark -> ! )
-%GetLB-LargestRetcode { #02 }
-%GetLB-LargestRelationCode { #0a }
+@unicode-lbalgo-data [
+  &state         00
+  &seen-zwj      00
+  &left-lbclass  LBClass-sot
+  &right-lbclass LBClass-sot
+]
 
+@unicode-lbalgo-reset
+  #00            ;unicode-lbalgo-data/state         STA
+  #00            ;unicode-lbalgo-data/seen-zwj      STA
+  GetLBClass-sot ;unicode-lbalgo-data/left-lbclass  STA
+  GetLBClass-sot ;unicode-lbalgo-data/right-lbclass STA
+RET
 
 @unicode-lbalgo-states7
 ( PO ULASKU! )
@@ -245,9 +272,11 @@ RET
   ;unicode-lbalgo-map ADD2
   LDA
   STHr
-  #01 AND #01 EOR ( the data is packed big endian )
-  SFT
+  #01 AND ,&and-to-get JCN
+  #04 SFT ,&handle-lbcode JMP
+  &and-to-get
   #0f AND
+  &handle-lbcode
 ( stack: lb-op-code )
 
   DUP
