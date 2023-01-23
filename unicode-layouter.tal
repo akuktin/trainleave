@@ -35,27 +35,24 @@
                    the base character )
   &originx  0000
   &originy  0000
-  &linbreak 00   ( if 0, then to the left is an x from the line-breaking algo
-                   and only emergency linebreaks are possible; if 1, then :
-                   is to the left and normal linebreaks are possible )
+  &linbreak LBCode-x
 
 %LObbw { #0002 }
 %LObbh { #0004 }
 %LObbxoff { #0003 }
 %LObbyoff { #0005 }
 %LObitmap { #0006 }
-@unicode-layouter ( new-linbreak len -- )
+@unicode-layouter ( lbcode len -- )
 
   ( we presume there is at least one codepoint to render - otherwise
     don't call us! )
-NIP
 
   STH #00
   &begin
   DUP STHkr LTH ,&do-a-loop JCN
-( stack: len // i )
+( stack: len // lbcode i )
     POP
-    STHkr ;draw-all CALL
+    STHkr ;draw-all CALL ( doesn't consume the argument )
     ;unicode-stream/off LDA STHr ADD unicode-stream-mask AND
     ;unicode-stream/off STA
 
@@ -74,19 +71,22 @@ NIP
     #0000 ;unicode-layout/originx STA2
     #0000 ;unicode-layout/originy STA2
 
+( stack: // lbcode len )
     POP
+    ;unicode-layout/linbreak STA
+
     RET
 
-  &do-a-loop ( na kraju mora da INC i )
+  &do-a-loop
   STHk ;unicode-stream/off LDA ADD unicode-stream-mask AND
-( stack: len i // off )
+( stack: len i // lbcode off )
 
   ToPosShort DUP2
   ;unicode-stream/gmdoff ADD2 LDA
   ToPosShort
   ;unifont-glyphmetadata ADD2
   STH2
-( stack: len i glyphptr* // off* )
+( stack: len i glyphptr* // lbcode off* )
 
   ( first, position the bitmap relative to glyph rendering origin )
 
@@ -108,23 +108,23 @@ NIP
 
   &nsmark
     LDAk
-( stack: len i glyphptr* // off* cur___y* d-y )
+( stack: len i glyphptr* // lbcode off* cur___y* d-y )
     STH2kr LObbh ADD2 LDA2 ( <- pulls both bbh and bbyoff ) ADD
     ADD ToShort
     ;unicode-layout/originy LDA2 ADD2
-( stack: len i glyphptr* // off* cur___y* d-y* )
+( stack: len i glyphptr* // lbcode off* cur___y* d-y* )
     STH2 OVR2 STH2r SWP2
-( stack: len i glyphptr* // off* cur___y* d-y* off* )
+( stack: len i glyphptr* // lbcode off* cur___y* d-y* off* )
     #20 SFT2 ;unicode-stream/pos-xy ADD2 INC2 INC2 STA2
-( stack: len i glyphptr* // off* cur___y* )
+( stack: len i glyphptr* // lbcode off* cur___y* )
     ( here we advance the mark's y glyph origin )
     LDAk
     STH2kr INC2 LDA
     ADD
     ROT ROT
     STA
-( stack: len i glyphptr* // off* )
-    ,&cont3 JMP
+( stack: len i glyphptr* // lbcode off* )
+    ;&cont3 JMP2
 
   &base-char
     POP2
@@ -159,6 +159,8 @@ NIP
       ;unicode-stream/starty DUP2 LDA2
       ;unicode-layout/lineadvance LDA2
       ADD2 SWP2 STA2
+
+      STH2 ;unicode-layout/linbreak STA LIT LBCode-x STH2r
     &fits-in-x
 
 
@@ -167,17 +169,17 @@ NIP
   ( third, get the dimensions of the glyph bitmap )
   STH2kr LObbh ADD2 LDA                 ( glyph height in rows of octets )
   STH2kr LObbw ADD2 LDA #07 ADD #03 SFT ( glyph width in octets of bitmaps )
-( stack: len i glyphptr* // off* glyph-h glyph-w )
+( stack: len i glyphptr* // lbcode off* glyph-h glyph-w )
   OVR2 ;unicode-stream/bbw ADD2 STA
   STH STH2k ROTr STHr STH2r
   ;unicode-stream/bbh ADD2 STA
 
   ( finally, draw the glyph )
   POP2
-( stack: len i glyphptr* // )
+( stack: len i glyphptr* // lbcode )
 
   POP2r
-( stack: len i // )
+( stack: len i // lbcode )
 
   STHr INC
   ;&begin JMP2

@@ -64,14 +64,8 @@ RET
 
   ( overflow protection )
   ,unicode-consumer-data/cnt LDR unicode-stream-size LTH ,&process JCN
-(    LIT LBCode-x unicode-stream-size ;unicode-layouter CALL
-    #00 ,unicode-consumer-data/cnt STR
-)
     LIT LBCode-x unicode-stream-size #01 SUB ;unicode-layouter CALL
     #01 ,unicode-consumer-data/cnt STR
-
-    ( signal an error - if you can! )
-(    RET )
   &process
 
   ;utf8result/high STH2k LDA STH2r INC2 LDA2
