@@ -1,0 +1,162 @@
+LB2:
+  sot x
+
+LB3:
+  ! eot
+
+LB4:
+  BK !
+
+LB5:
+  CR x LF
+  CR !
+  LF !
+  NL !
+
+LB6:
+  x ( BK | CR | LF | NL )
+
+LB7:
+  x SP
+  x ZW
+
+LB8:
+  ZW SP* :
+
+LB8a:
+  ZWJ x
+
+# CM i ZWJ cu se namerno pretvarati da ne postoji do daljnjeg
+
+LB9:
+  Treat X (CM | ZWJ)* as if it were X
+  X => [^ BK CR LF NL SP ZW]
+
+LB10:
+  Treat any remaining CM or ZWJ as if it were AL
+
+LB11:
+  x WJ
+  WJ x
+
+LB12:
+  GL x
+
+# tailorable
+
+LB12a:
+  [^ SP BA HY] x GL
+
+LB13:
+  x CL
+  x CP
+  x EX
+  x IS
+  x SY
+
+LB14:
+  OP SP* x
+
+LB15:
+  QU SP* x OP
+
+LB16:
+  ( CL | CP ) SP* x NS
+
+LB12:
+  B2 SP* x B2
+
+LB18:
+  SP :
+
+LB19:
+  x QU
+  QU x
+
+LB20:
+  : CB
+  CB :
+
+LB21:
+  x BA
+  x HY
+  x NS
+  BB x
+
+LB21a:
+  HL ( HY | BA ) x
+
+LB21b:
+  SY x HL
+
+LB22:
+  x IN
+
+LB23:
+  ( AL | HL ) x NU
+  NU x ( AL | HL )
+
+LB23a:
+  PR x ( ID | EB | EM )
+  ( ID | EB | EM ) x PO
+
+LB24:
+  ( PR | PO ) x ( AL | HL )
+  ( AL | HL ) x ( PR | PO )
+
+LB25:
+  CL x PO
+  CP x PO
+  CL x PR
+  CL x PR
+  NU x PO
+  NU x PR
+  PO x OP
+  PO x NU
+  PR x OP
+  PR x NU
+  HY x NU
+  IS x NU
+  NU x NU
+  SY x NU
+
+LB26:
+  JL x ( JL | JV | H2 | H3 )
+  ( JV | H2 ) x ( JV | JT )
+  ( JT | H3 ) x JT
+
+LB27:
+  ( JL | JV | JT | H2 | H3 ) x PO
+  PR x ( JL | JV | JT | H2 | H3 )
+
+LB28:
+  ( AL | HL ) x ( AL | HL )
+
+LB29:
+  IS x ( AL | HL )
+
+LB30:
+  ( AL | HL | NU ) x [OP-[\p{ea=F}\p{ea=W}\p{ea=H}]]
+  [CP-[\p{ea=F}\p{ea=W}\p{ea=H}]] x ( AL | HL | NU )
+ pojednostavljeno, za pocetak:
+  ( AL | HL | NU ) x OP
+  CP x ( AL | HL | NU )
+ prepisano za implementaciju:
+  ( AL | HL | NU ) x OPshort
+  CPshort x ( AL | HL | NU )
+
+LB30a:
+  sot (RI RI)* RI x RI
+  [^ RI] (RI RI) * RI x RI
+ pojednostavljeno, za pocetak:
+   RI x RI
+
+LB30b:
+  EB x EM
+  [\p{Extended_Pictographic}&\p{Cn}] x EM
+ pojednostavljeno, za pocetak:
+  EB x EM
+
+LB30:
+  ALL :
+  : ALL

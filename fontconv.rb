@@ -1,11 +1,41 @@
-require './ucd_prep0'
+require './ucd_prep1'
+require './unikod-line-break5'
 
-Ccc_gc = CCC_GC.new
+# precalculate some things
+UnicodePoints.each do |point|
+  # Resolve some interesting LB classes. We don't resolve :CB.
+  case point[:lb]
+  when :AI, :SG, :XX
+    point[:OG_lb] = point[:lb]
+    point[:lb] = :AL
+  when :SA
+    point[:OG_lb] = point[:lb]
+    if (point[:gc] == :Mn) || (point[:gc] == :Mc)
+      point[:lb] = :CM
+    else
+      point[:lb] = :AL
+    end
+  when :CJ
+    point[:OG_lb] = point[:lb]
+    point[:lb] = :NS
+  else
+  end
+end; nil
 
+# sanity check
+seen_lbclasses = {}
+UnicodePoints.each do |point|
+  seen_lbclasses[point[:lb]] = true
+end; nil
+if ((seen_lbclasses.keys.sort - LB_AllClasses).any?) ||
+   (! LB_AllClasses.index(:AL))
+  raise "unknown LB classes exist, or LB class :AL doesn't exit!"
+end
+
+# now perform the work :)
 unifont_raw = File.open('unifont-15.0.01.bdf', 'rb'){|fh|
   fh.read
-}.split(/\r?\n/);
-unifont_raw.count
+}.split(/\r?\n/)
 
 unifont_chars = {};
 unifont_raw.inject([:nochar,nil,{:bitmap=>[]}]){|(state,name,carry),line|
@@ -37,8 +67,7 @@ unifont_raw.inject([:nochar,nil,{:bitmap=>[]}]){|(state,name,carry),line|
     end
   end;
   [state,name,carry]
-};
-unifont_chars.keys.count
+}
 
 
 Scrolllen   = 0x1000
@@ -65,14 +94,14 @@ unifont_chars.to_a.each do |name, desc|
     i
   };
 
-  if klass = Ccc_gc.get(name)
-    if klass_gc = Ccc_gc.gc_sym.index(klass[:gc_sym])
+  if point = UnicodePoints[name]
+    if klass_gc = UnicodeAllGc.index(point[:gc])
       klass_gc += 1
     else
       klass_gc = 0
     end
 
-    case klass[:ccc]
+    case point[:ccc]
     when 220 # below
       klass_nsmark = 1
       dwidthx = 0                            # !!!
@@ -86,9 +115,14 @@ unifont_chars.to_a.each do |name, desc|
     end
 
     klass = klass_gc + (klass_nsmark << 5)
+
+    lb_klass = point[:lb]
   else
     klass = 0 # means ignore this glyph
+    lb_klass = :AL # technically :XX, but it gets resolved to :AL by default
   end
+
+  lb_klass = LB_AllClasses.index(lb_klass)
 
   glyphmetadata=[dwidthx,dwidthy,bbw,bbxoff,bbh,bbyoff,0,0].pack("c*");
   if glyphmetadata_idx = glyphs.index{|g| g == glyphmetadata };
@@ -126,7 +160,8 @@ unifont_chars.to_a.each do |name, desc|
   bitmaps_taken += bitmap_len
 
   # klass == 0 means to ignore the glyph
-  res = [klass, 0, 0, glyphmetadata_offset, bitmap_offset].pack("c4i>");
+  res = [klass, lb_klass, 0, glyphmetadata_offset,
+         bitmap_offset].pack("c4i>");
   codechars[name] = res
 end; nil
 

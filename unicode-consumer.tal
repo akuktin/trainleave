@@ -78,8 +78,21 @@ RET
   ToPosShort STH2
 
 ( stack: off* // codecharptr* )
-  LDAk
-( stack: off* // codecharptr* class )
+  DUP2 INC LDA
+( stack: off* // codecharptr* lbclass )
+  ;unicode-lbalgo-data/right-lbclass LDAk STH STA
+  STHr ;unicode-lbalgo-data/left-lbclass STA
+( stack: off* // codecharptr* )
+  ;unicode-lbalgo-data/state LDA ToPosShort
+  ;unicode-lbalgo-statecalls ADD2 LDA2 JMP2
+( stack: off* // codecharptr* lb-code )
+
+  DUP LIT ": NEQ ,&cont1 JCN
+    DUP
+    #00 ;unicode-consumer-data/cnt LDAk STH STA STHr
+    ;unicode-layouter CALL
+  &cont1
+( stack: off* // codecharptr* lb-code )
 
 (
   DUP #05 SFT #03 AND #00 NEQ ,&process-2 JCN
@@ -90,6 +103,7 @@ P
   &process-2
 )
 
+  LDAk
   STH2kr ;unicode-stream/class  ADD2 STA
   #0003 ADD2
   LDAk STH2kr ;unicode-stream/gmdoff ADD2 STA

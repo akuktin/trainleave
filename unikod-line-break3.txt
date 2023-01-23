@@ -1,0 +1,118 @@
+LB2:
+  sot x Any
+LB4:
+  BK ! Any
+LB5:
+  CR x LF
+  (CR|LF|NL) ! Any
+LB6:
+  Any x (BK|CR|LF|NL)
+LB7:
+# BUG! Here too, the sx rules from LB8, LB14, LB16 and LB17 won't trigger
+# Fix:
+ ZW s0 SP
+ OP s2 SP
+ (CL|CP) s6 SP
+ B2 s7 SP
+  Any x (SP|ZW)
+LB8:
+#  ZW,SP* : Any
+  ZW : Any
+##  ZW s0 SP
+LB8a:
+# TO BE HANDLED INSIDE s1!
+#  ZWJ x Any
+LB9:
+# Fix for better handling of LB10:
+ (CM|ZWJ) s4 Any
+  [^BK|CR|LF|NL|SP|ZW] s1 (CM|ZWJ)
+LB10:
+# Treat any remaining CM or ZWJ as if it were AL
+# This basically only triggers for SP s5 (CM|ZWJ)...
+  Any s5 (CM|ZWJ)
+LB11:
+  Any x WJ
+  WJ x Any
+LB12:
+  GL x Any
+LB12a:
+  [^SP|BA|HY] x GL
+LB13:
+  Any x (CL|CP|EX|IS|SY)
+LB14:
+#  OP,SP* x Any
+  OP x Any
+  OP s2 SP
+LB16:
+#  (CL|CP),SP* x NS
+  (CL|CP) x NS
+  (CL|CP) s6 SP
+LB17:
+#  B2,SP* x B2
+  B2 x B2
+  B2 s7 SP
+LB18:
+  SP : Any
+LB19:
+  Any x QU
+  QU x Any
+LB20:
+  Any : CB
+  CB : Any
+LB21:
+# BUG! "HL s3 (HY|BA)" won't enter into this...
+# Fix:
+ HL s3 (HY|BA)
+  Any x (BA|HY|NS)
+  BB x Any
+LB21a:
+#  HL,(HY|BA) x Any
+  HL s3 (HY|BA)
+LB21b:
+  SY x HL
+LB22:
+  Any x IN
+LB23:
+  (AL|HL) x NU
+  NU x (AL|HL)
+LB23a:
+  PR x (ID|EB|EM)
+  (ID|EB|EM) x PO
+LB24:
+  (PR|PO) x (AL|HL)
+  (AL|HL) x (PR|PO)
+LB25:
+  CL x PO
+  CP x PO
+  CL x PR
+  CL x PR
+  NU x PO
+  NU x PR
+  PO x OP
+  PO x NU
+  PR x OP
+  PR x NU
+  HY x NU
+  IS x NU
+  NU x NU
+  SY x NU
+LB26:
+  JL x (JL|JV|H2|H3)
+  (JV|H2) x (JV|JT)
+  (JT|H3) x JT
+LB27:
+  (JL|JV|JT|H2|H3) x PO
+  PR x (JL|JV|JT|H2|H3)
+LB28:
+  (AL|HL) x (AL|HL)
+LB29:
+  IS x (AL|HL)
+LB30:
+  (AL|HL|NU) x OP
+  CP x (AL|HL|NU)
+LB30a:
+  RI x RI
+LB30b:
+  EB x EM
+LB30:
+  Any : Any

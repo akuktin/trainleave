@@ -1,121 +1,285 @@
-@unicode-lbalgo-dataset
-  $2d2 ( == 722 == ((38*38)/2) )
-
-@unicode-lbalgo ( lbclass -- ??? )
-
+%ScalerDigit2 { #0026 } ( 38, the length of AllClasses array )
+@calc-lbmap-addr ( high_digit low_digit -- address* )
+  STH
+  ToPosShort
+  ScalerDigit2 MUL2     ( positional number notation is fun! \o/ )
+  STHr ToPosShort ADD2
 RET
+
+
+%LBCode-x { 02 }
+%LBCode-C { 01 } ( Colon -> : )
+%LBCode-E { 00 } ( Exclamation mark -> ! )
+%GetLB-LargestRetcode { #02 }
+%GetLB-LargestRelationCode { #0a }
 
 
 @unicode-lbalgo-states7
 ( PO ULASKU! )
+&at-entry
   ( 1. vrati x )
+  LIT LBCode-x RET
 ( PO POZIVU! )
+&at-call
   ( 1. proveri da li je desni SP )
+  ;unicode-lbalgo-data/right-lbclass LDA
+  DUP GetLBClass-SP
+  NEQ ,&cont0 JCN
   (   2a. ako jeste, vrati x )
+    POP LIT LBCode-x RET
   (   2b. ako nije, )
-  ( 3. proveri da li je desni B2 )
-  (   4a. ako jeste, )
-  (     5. stavi stanje df )
-  (     6. vrati x )
-  (   4b. ako nije, )
-  (     7. stavi stanje df )
-  (     8. pokreni algoritam ispocetka ) ( znaci, verovatno ce vratiti : )
-RET
+  &cont0
+  ( 3. stavi stanje df )
+  #00 ;unicode-lbalgo-data/state STA
+  ( 4. proveri da li je desni B2 )
+  GetLBClass-B2
+  NEQ ,&cont1 JCN
+  (   5a. ako jeste, vrati x )
+    LIT LBCode-x RET
+  (   5b. ako nije, )
+  &cont1
+  (     6. pokreni algoritam ispocetka ) ( znaci, verovatno ce vratiti : )
+    ( hardcode the position from which we call )
+    ;unicode-lbalgo-statecalls LDA2 JMP2
+
 
 @unicode-lbalgo-states6
 ( PO ULASKU! )
+&at-entry
   ( 1. vrati x )
+  LIT LBCode-x RET
 ( PO POZIVU! )
+&at-call
   ( 1. proveri da li je desni SP )
+  ;unicode-lbalgo-data/right-lbclass LDA
+  DUP GetLBClass-SP
+  NEQ ,&cont0 JCN
   (   2a. ako jeste, vrati x )
+    POP LIT LBCode-x RET
   (   2b. ako nije, )
-  ( 3. proveri da li je desni NS )
-  (   4a. ako jeste, )
-  (     5. stavi stanje df )
-  (     6. vrati x )
-  (   4b. ako nije, )
-  (     7. stavi stanje df )
-  (     8. pokreni algoritam ispocetka ) ( znaci, verovatno ce vratiti : )
-RET
+  &cont0
+  ( 3. stavi stanje df )
+  #00 ;unicode-lbalgo-data/state STA
+  ( 4. proveri da li je desni NS )
+  GetLBClass-NS
+  NEQ ,&cont1 JCN
+  (   5a. ako jeste, vrati x )
+    LIT LBCode-x RET
+  (   5b. ako nije, )
+  &cont1
+  (     6. pokreni algoritam ispocetka ) ( znaci, verovatno ce vratiti : )
+    ( hardcode the position from which we call )
+    ;unicode-lbalgo-statecalls LDA2 JMP2
+
 
 @unicode-lbalgo-states5
 ( PO ULASKU! )
+&at-entry
   ( 1. postavi stanje s1 )
+  #08 ;unicode-lbalgo-data/state STA
   ( 2. proveri da li je desni ZWJ )
+  ;unicode-lbalgo-data/right-lbclass LDA
+  GetLBClass-ZWJ
+  NEQ ,&cont0 JCN
   (   3a. ako jeste, )
   (     4. zabelezi da vidis ZWJ )
+    #01 ;unicode-lbalgo-data/seen-zwj STA
   ( 5. promeni klasu desnog u AL )
+  &cont0
+  GetLBClass-AL ;unicode-lbalgo-data/right-lbclass STA
   ( 6. injektuj CARRIER desno )
+      ( ... )
   ( 7. vrati : ) ( ovo je hardkodovano, iz UAX #14 )
+  LIT LBCode-C
 RET
 
 @unicode-lbalgo-states4
 ( PO ULASKU! )
+&at-entry
   ( 1. postavi stanje s1 )
+  #08 ;unicode-lbalgo-data/state STA
   ( 2. proveri da li je levi ZWJ )
+  ;unicode-lbalgo-data/left-lbclass LDA
+  GetLBClass-ZWJ
+  NEQ ,&cont0 JCN
   (   3a. ako jeste, )
   (     4. zabelezi da vidis ZWJ )
+    #01 ;unicode-lbalgo-data/seen-zwj STA
   ( 5. promeni klasu levog u AL )
+  &cont0
+  GetLBClass-AL ;unicode-lbalgo-data/left-lbclass STA
   ( 6. injektuj CARRIER levo )
+      ( ... )
   ( 7. pozovi PO ULASKU novog stanja )
+  ;unicode-lbalgo-data/state LDA INC INC ToPosShort
+  ;unicode-lbalgo-statecalls ADD2 LDA2 JMP2
 ( ovo hendluje i goli ZWJ )
-RET
+
 
 @unicode-lbalgo-states3
 ( PO ULASKU! )
+&at-entry
   ( 1. vrati x )
+  LIT LBCode-x RET
 ( PO POZIVU! )
+&at-call
   ( 1. postavi stanje df )
+  #00 ;unicode-lbalgo-data/state STA
   ( 2. vrati x )
+  LIT LBCode-x
 RET
 
 @unicode-lbalgo-states2
 ( PO ULASKU! )
+&at-entry
   ( 1. vrati x )
+  LIT LBCode-x RET
 ( PO POZIVU! )
+&at-call
   ( 1. proveri da li je desni SP )
+  ;unicode-lbalgo-data/right-lbclass LDA
+  GetLBClass-SP
+  NEQ ,&cont0 JCN
   (   2a. ako jeste, vrati x )
+    LIT LBCode-x RET
   (   2b. ako nije, )
+  &cont0
   (     3. stavi stanje df )
+  #00 ;unicode-lbalgo-data/state STA
   (     4. vrati x ) ( ovo je zapravo hardkodovano iz algoritma u UAX #14 )
+  LIT LBCode-x
 RET
 
 @unicode-lbalgo-states1
 ( PO ULASKU! )
+&at-entry
   ( 1. pokreni "PO POZIVU!" )
 ( PO POZIVU! )
+&at-call
   ( 1. proveri da li je desni ZWJ )
+  ;unicode-lbalgo-data/right-lbclass LDA
+  DUP GetLBClass-ZWJ
+  NEQ ,&cont0 JCN
   (   2a. ako jeste, )
   (     3. zabelezi da vidis ZWJ )
-  (     4. zabrani rotaciju )
+    #01 ;unicode-lbalgo-data/seen-zwj STA
+  (     4. zabrani rotaciju (defakto) )
+    ;unicode-lbalgo-data/left-lbclass  LDA
+    ;unicode-lbalgo-data/right-lbclass STA
   (     5. vrati x )
+    POP LIT LBCode-x RET
   (   2b. ako nije, )
+  &cont0
   ( 6. proveri da li je desni CM )
+  GetLBClass-CM
+  NEQ ,&cont1 JCN
   (   7a. ako jeste, )
   (     8. zabelezi da ne vidis ZWJ )
-  (     9. zabrani rotaciju )
+    #00 ;unicode-lbalgo-data/seen-zwj STA
+  (     9. zabrani rotaciju (defakto) )
+    ;unicode-lbalgo-data/left-lbclass  LDA
+    ;unicode-lbalgo-data/right-lbclass STA
   (     10. vrati x )
+    LIT LBCode-x RET
   (   7b. ako nije, )
+  &cont1
   ( 11. stavi stanje df )
-  ( 12. proveri da li si video ZWJ )
+  #00 ;unicode-lbalgo-data/state STA
+  ( 12. proveri da li si video ZWJ + resetuj polje )
+  #00 ;unicode-lbalgo-data/seen-zwj LDAk STH STA STHr
+  #00 EQU ,&cont2 JCN
   (   13a. ako jesi, )
   (     14. vrati x ) ( takodje hardkodovano )
+    LIT LBCode-x RET
   (   13b. ako nisi, )
+  &cont2
   (     15. pocni algoritam ispocetka )
-RET
+  ( hardcode the position from which we call )
+  ;unicode-lbalgo-statecalls LDA2 JMP2
+
 
 @unicode-lbalgo-states0
 ( PO ULASKU! )
+&at-entry
   ( 1. vrati x )
+  LIT LBCode-x RET
 ( PO POZIVU! )
+&at-call
   ( 1. proveri da li je desni SP )
+  ;unicode-lbalgo-data/right-lbclass LDA
+  DUP
+  GetLBClass-SP
+  NEQ ,&cont0 JCN
   (   2a. ako jeste, vrati x )
+    POP LIT LBCode-x RET
   (   2b. ako nije, )
-  ( 3. proveri da li je desni (BK|CR|LF|NL|ZW) ) ( ovo je zapravo hardkod )
-  (   4a. ako jeste, )
-  (     5. stavi stanje df )
+  &cont0
+  ( 3. stavi stanje df )
+  #00 ;unicode-lbalgo-data/state STA
+  ( 4. proveri da li je desni (BK|CR|LF|NL|ZW) ) ( ovo je zapravo hardkod )
+  #00
+  OVR GetLBClass-BK EQU ORA
+  OVR GetLBClass-CR EQU ORA
+  OVR GetLBClass-LF EQU ORA
+  OVR GetLBClass-NL EQU ORA
+  OVR GetLBClass-ZW EQU ORA
+  NIP
+  #00 EQU ,&cont1 JCN
+  (   5a. ako jeste, )
   (     6. vrati x )
-  (   4b. ako nije, )
-  (     7. stavi stanje df )
-  (     8. vrati : )
+    LIT LBCode-x RET
+  (   5b. ako nije, )
+  &cont1
+  (     7. vrati : )
+    LIT LBCode-C
 RET
+
+@unicode-lbalgo-statedf
+&at-call
+  ;unicode-lbalgo-data/left-lbclass  LDA
+  ;unicode-lbalgo-data/right-lbclass LDA
+( stack: high-digit low-digit )
+  ;calc-lbmap-addr CALL
+  STHk
+  #01 SFT2
+  ;unicode-lbalgo-map ADD2
+  LDA
+  STHr
+  #01 AND #01 EOR ( the data is packed big endian )
+  SFT
+  #0f AND
+( stack: lb-op-code )
+
+  DUP
+  GetLB-LargestRetcode
+  GTH ,&change-state JCN
+    RET
+  &change-state
+  ( bounds check! \o/ )
+  GetLB-LargestRelationCode OVR
+  LTH ,&handle-oob JCN
+
+  GetLB-LargestRetcode SUB
+  #20 SFT
+  DUP ;unicode-lbalgo-data/state STA ( set new state )
+  INC INC ToPosShort             ( move the pointer to the at-entry address )
+  ;unicode-lbalgo-statecalls ADD2 LDA2 JMP2
+
+  &handle-oob
+  ( unreachable )
+  POP LIT LBCode-x
+RET
+
+
+@unicode-lbalgo-statecalls
+  ( the structure is: an array of pairs (at-call,at-entry) )
+( TODO: change the zeroes to something better )
+  =unicode-lbalgo-statedf/at-call 0000
+  =unicode-lbalgo-states0/at-call =unicode-lbalgo-states0/at-entry
+  =unicode-lbalgo-states1/at-call =unicode-lbalgo-states1/at-entry
+  =unicode-lbalgo-states2/at-call =unicode-lbalgo-states2/at-entry
+  =unicode-lbalgo-states3/at-call =unicode-lbalgo-states3/at-entry
+  0000                            =unicode-lbalgo-states4/at-entry
+  0000                            =unicode-lbalgo-states5/at-entry
+  =unicode-lbalgo-states6/at-call =unicode-lbalgo-states6/at-entry
+  =unicode-lbalgo-states7/at-call =unicode-lbalgo-states7/at-entry

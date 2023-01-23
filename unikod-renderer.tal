@@ -42,7 +42,7 @@ BRK
   DUP LIT "q EQU
   ,&kill-thyself JCN
   ;utf8decode-octet CALL
-  ;unicode-consumer-flush CALL
+(  ;unicode-consumer-flush CALL )
   BRK
   &kill-thyself
   POP
@@ -118,6 +118,7 @@ RET
 ~file-access.tal
 ~utf8-decode.tal
 ~unicode-consumer.tal
+~unicode-lbalgo.tal
 ~unicode-layouter.tal
 ~unicode-renderer.tal
 
@@ -165,4 +166,5 @@ RET
 RET
 
 
+~unicode-lbalgo-map.tal
 ~unicode-datasets.tal
