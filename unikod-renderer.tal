@@ -167,6 +167,6 @@ RET
     SWP
 RET
 
-|1000
+
 ~unicode-lbalgo-map.tal
 ~unicode-datasets.tal

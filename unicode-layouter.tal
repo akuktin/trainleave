@@ -19,6 +19,14 @@
 
 
 
+( !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! )
+( !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! )
+( !!!!!!!!! Lots of code repetition in this file. !!!!!!!!! )
+( !!!!!!!!! Note to self: organize better.        !!!!!!!!! )
+( !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! )
+( !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! )
+
+
 
 @unicode-layout
   &sizeup ( -- )
@@ -88,17 +96,13 @@
   STH2
 ( stack: len i glyphptr* // lbcode off* )
 
-  ( first, position the bitmap relative to glyph rendering origin )
+  ( position the bitmap relative to glyph rendering origin )
 
-  ( calculate the x origin of the bitmap and store it )
-  STH2kr LObbxoff ADD2 LDA ToShort
-  ;unicode-layout/originx LDA2 ADD2
-  OVR2 #20 SFT2 ;unicode-stream/pos-xy ADD2 STA2
-
-  ( calcuate the y origin of the bitmap, by class, and store it )
+  ( calculate the y origin of the bitmap, by class, and store it )
   DUP2 ;unicode-stream/class ADD2 LDA
   #05 SFT #03 AND
   #01 LTHk ,&base-char JCN
+( stack: len i glyphptr* // lbcode off* class 01 )
   EQU ,&nsmark-below JCN
   &nsmark-above
     ;unicode-layout/cur220y ,&nsmark JMP
@@ -107,6 +111,7 @@
     ;unicode-layout/cur230y
 
   &nsmark
+( stack: len i glyphptr* // lbcode off* cur___y* )
     LDAk
 ( stack: len i glyphptr* // lbcode off* cur___y* d-y )
     STH2kr LObbh ADD2 LDA2 ( <- pulls both bbh and bbyoff ) ADD
@@ -124,13 +129,71 @@
     ROT ROT
     STA
 ( stack: len i glyphptr* // lbcode off* )
-    ;&cont3 JMP2
+
+    STH2kr LObbxoff ADD2 LDA ToShort
+    ;unicode-layout/originx LDA2 ADD2
+    OVR2 #20 SFT2 ;unicode-stream/pos-xy ADD2 STA2
+
+    ;&done-positioning JMP2
+
 
   &base-char
+( stack: len i glyphptr* // lbcode off* class 01 )
     POP2
+
+    ( ensure the render unit, can fit into the rendering field )
+    ;unicode-stream/startx LDA2
+    ;unicode-layout/originx LDA2 ADD2
+    STH2kr LObbw ADD2 LDA2 ( <- pulls both bbw and bbxoff ) ADD ToShort
+    ADD2
+( stack: len i glyphptr* // lbcode off* maxpos-in-x* )
+
+    ;unicode-layout/maxx LDA2 GTH2 #01 EOR ,&fits-in-x JCN
+      ;unicode-layout/linbreak LDA
+      LIT LBCode-x
+      NEQ ,&line-break-entire-unit JCN
+
+( stack: len i glyphptr* // lbcode off* )
+
+      ( line-break-front-of-unit ) ( break the unit, render first half )
+        SWP2r STH2r
+        ;draw-all CALL ( doesn't consume the argument )
+
+        DUP
+        ;unicode-stream/off LDA ADD unicode-stream-mask AND
+        ;unicode-stream/off STA
+
+        SUB #00
+        STH2 SWP2r
+
+        #0000 ;unicode-layout/advancex STA2
+        #0000 ;unicode-layout/advancey STA2
+
+        #0000 ;unicode-layout/originx STA2
+        #0000 ;unicode-layout/originy STA2
+
+        ,&wrap-start JMP
+
+      &line-break-entire-unit
+        STH2 ;unicode-layout/linbreak STA LIT LBCode-x STH2r
+
+        &wrap-start
+        ;unicode-layout/minx   LDA2 ;unicode-stream/startx STA2
+        ;unicode-stream/starty DUP2 LDA2
+        ;unicode-layout/lineadvance LDA2
+        ADD2 SWP2 STA2
+    &fits-in-x
+
+
+    STH2kr LObbxoff ADD2 LDA ToShort
+    ;unicode-layout/originx LDA2 ADD2
+    OVR2 #20 SFT2 ;unicode-stream/pos-xy ADD2 STA2
+
     STH2kr LObbh ADD2 LDA2 ( <- pulls both bbh and bbyoff ) ADD ToShort
     ;unicode-layout/originy LDA2 ADD2
     OVR2 #20 SFT2 ;unicode-stream/pos-xy ADD2 INC2 INC2 STA2
+
+( stack: len i glyphptr* // lbcode off* )
 
     ( get the x advance for the glyph )
     STH2kr     LDA ToShort
@@ -148,23 +211,12 @@
     ( add up the y advance for the render unit )
     ;unicode-layout/advancey LDAk2 ROT2 ADD2 SWP2 STA2
 
-    ( ensure the glyph, later on grapheme cluster/render unit, can
-      fit into the rendering field )
-    ;unicode-stream/startx LDA2
-    STH2kr LObbw ADD2 LDA2 ( <- pulls both bbw and bbxoff ) ADD ToShort
-    ;unicode-layout/originx LDA2 ADD2
-    ADD2
-    ;unicode-layout/maxx LDA2 GTH2 #01 EOR ,&fits-in-x JCN
-      ;unicode-layout/minx   LDA2 ;unicode-stream/startx STA2
-      ;unicode-stream/starty DUP2 LDA2
-      ;unicode-layout/lineadvance LDA2
-      ADD2 SWP2 STA2
-
-      STH2 ;unicode-layout/linbreak STA LIT LBCode-x STH2r
-    &fits-in-x
+    #0000 ;unicode-layout/cur220y STA ;unicode-layout/cur230y STA
 
 
-  &cont3
+  &done-positioning
+( stack: len i glyphptr* // lbcode off* )
+
 
   ( third, get the dimensions of the glyph bitmap )
   STH2kr LObbh ADD2 LDA                 ( glyph height in rows of octets )
