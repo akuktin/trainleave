@@ -19,31 +19,70 @@
 
 
 
-( !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! )
-( !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! )
-( !!!!!!!!! Lots of code repetition in this file. !!!!!!!!! )
-( !!!!!!!!! Note to self: organize better.        !!!!!!!!! )
-( !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! )
-( !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! )
+%Unicode-layouter-zero-markoffset {
+  #0000 ;unicode-layout/cur220y STA
+        ;unicode-layout/cur230y STA
+}
 
+@unicode-layouter-zero-renderunit ( -- )
+  &all
+  Unicode-layouter-zero-markoffset
+
+  &bigptr
+  #0000 ,unicode-layout/advancex STR2
+  #0000 ,unicode-layout/advancey STR2
+
+  #0000 ,unicode-layout/originx STR2
+  #0000 ,unicode-layout/originy STR2
+RET
+
+@unicode-layouter-advance-stream-offset ( len -- )
+  ;unicode-stream/off LDA ADD unicode-stream-mask AND
+  ;unicode-stream/off STA
+RET
+
+@unicode-layouter-wrap-line ( -- )
+  ,unicode-layout/minx   LDR2 ;unicode-stream/startx STA2
+  ;unicode-stream/starty DUP2 LDA2
+  ,unicode-layout/lineadvance LDR2
+  ADD2 SWP2 STA2
+RET
+
+%Unicode-layouter-position-in-x {
+  STH2kr LObbxoff ADD2 LDA ToShort
+  ;unicode-layout/originx LDA2 ADD2
+  OVR2 #20 SFT2 ;unicode-stream/pos-xy ADD2 STA2
+}
 
 
 @unicode-layout
   &sizeup ( -- )
           .Screen/height DEI2 ,&maxy STR2
           .Screen/width  DEI2 ,&maxx STR2 RET
-  [ &lineadvance 0010 ( vertical advance between lines )
-    &minx     0006 &miny     0006
-    &maxx     ffff &maxy     ffff ]
+  [
+    ( y advance for when flipping from one line to the next )
+    &lineadvance 0010 ( vertical advance between lines )
 
-  &cur220y  00
-  &cur230y  00
-  &advancex 0000
-  &advancey 0000 ( for the time being, only take into account
-                   the base character )
-  &originx  0000
-  &originy  0000
-  &linbreak LBCode-x
+    ( physical location of the rendering window on the screen )
+    &minx     0006 &miny     0006
+    &maxx     ffff &maxy     ffff
+
+    ( delta in y for stacking nonspacing marks )
+    &cur220y  00
+    &cur230y  00
+
+    ( how muchh to advance the render unit pointer after rendering the unit )
+    &advancex 0000
+    &advancey 0000 ( for the time being, only take into account
+                     the base character )
+
+    ( where to render this base character within the rendering unit )
+    &originx  0000
+    &originy  0000
+
+    ( the LB code to the left of the rendering unit )
+    &linbreak LBCode-x
+  ]
 
 %LObbw { #0002 }
 %LObbh { #0004 }
@@ -61,28 +100,34 @@
 ( stack: len // lbcode i )
     POP
     STHkr ;draw-all CALL ( doesn't consume the argument )
-    ;unicode-stream/off LDA STHr ADD unicode-stream-mask AND
-    ;unicode-stream/off STA
 
-    #0000 ;unicode-layout/cur220y STA ;unicode-layout/cur230y STA
+    STHr
+    ;unicode-layouter-advance-stream-offset CALL ( consumes a byte )
+( stack: // lbcode len )
 
-    #0000
-    ;unicode-layout/advancex LDA2k STH2 STA2 STH2r
+    POP
+    DUP LIT LBCode-E NEQ ,&normal-handover JCN
+      ;unicode-layouter-wrap-line CALL
+      POP LIT LBCode-x
+      ,&zero-renderunit JMP
+    &normal-handover
+( stack: // lbcode )
+
+    ( advance the pointer for the render unit in x )
+    ;unicode-layout/advancex LDA2
     ;unicode-stream/startx LDA2k
     ROT2 ADD2 SWP2 STA2
 
-    #0000
-    ;unicode-layout/advancey LDA2k STH2 STA2 STH2r
+    ( advance the pointer for the render unit in y )
+    ;unicode-layout/advancey LDA2
     ;unicode-stream/starty LDA2k
     ROT2 ADD2 SWP2 STA2
 
-    #0000 ;unicode-layout/originx STA2
-    #0000 ;unicode-layout/originy STA2
+    &zero-renderunit
+    ;unicode-layouter-zero-renderunit/all CALL
 
-( stack: // lbcode len )
-    POP
     ;unicode-layout/linbreak STA
-
+( stack: // )
     RET
 
   &do-a-loop
@@ -98,7 +143,9 @@
 
   ( position the bitmap relative to glyph rendering origin )
 
-  ( calculate the y origin of the bitmap, by class, and store it )
+  ( first figure out if this is a base character or a (supported) NS mark )
+    ( for the time being, the only (nonspacing) marks that are supported are
+      the ones that stack above or below the base )
   DUP2 ;unicode-stream/class ADD2 LDA
   #05 SFT #03 AND
   #01 LTHk ,&base-char JCN
@@ -111,6 +158,7 @@
     ;unicode-layout/cur230y
 
   &nsmark
+    ( position the bitmap in the render unit, in y )
 ( stack: len i glyphptr* // lbcode off* cur___y* )
     LDAk
 ( stack: len i glyphptr* // lbcode off* cur___y* d-y )
@@ -130,9 +178,8 @@
     STA
 ( stack: len i glyphptr* // lbcode off* )
 
-    STH2kr LObbxoff ADD2 LDA ToShort
-    ;unicode-layout/originx LDA2 ADD2
-    OVR2 #20 SFT2 ;unicode-stream/pos-xy ADD2 STA2
+    ( position the bitmap in the render unit, in x )
+    Unicode-layouter-position-in-x
 
     ;&done-positioning JMP2
 
@@ -141,7 +188,7 @@
 ( stack: len i glyphptr* // lbcode off* class 01 )
     POP2
 
-    ( ensure the render unit, can fit into the rendering field )
+    ( ensure the render unit can fit into the rendering field )
     ;unicode-stream/startx LDA2
     ;unicode-layout/originx LDA2 ADD2
     STH2kr LObbw ADD2 LDA2 ( <- pulls both bbw and bbxoff ) ADD ToShort
@@ -160,17 +207,14 @@
         ;draw-all CALL ( doesn't consume the argument )
 
         DUP
-        ;unicode-stream/off LDA ADD unicode-stream-mask AND
-        ;unicode-stream/off STA
+        ;unicode-layouter-advance-stream-offset CALL ( consumes a byte )
 
-        SUB #00
+( stack: glyphptr* // lbcode off* len i )
+        SUB #00 ( update both the remaining len and i the iterator )
         STH2 SWP2r
+( stack: len i glyphptr* // lbcode off* )
 
-        #0000 ;unicode-layout/advancex STA2
-        #0000 ;unicode-layout/advancey STA2
-
-        #0000 ;unicode-layout/originx STA2
-        #0000 ;unicode-layout/originy STA2
+	;unicode-layouter-zero-renderunit/bigptr CALL
 
         ,&wrap-start JMP
 
@@ -178,56 +222,52 @@
         STH2 ;unicode-layout/linbreak STA LIT LBCode-x STH2r
 
         &wrap-start
-        ;unicode-layout/minx   LDA2 ;unicode-stream/startx STA2
-        ;unicode-stream/starty DUP2 LDA2
-        ;unicode-layout/lineadvance LDA2
-        ADD2 SWP2 STA2
+        ;unicode-layouter-wrap-line CALL
     &fits-in-x
 
 
-    STH2kr LObbxoff ADD2 LDA ToShort
-    ;unicode-layout/originx LDA2 ADD2
-    OVR2 #20 SFT2 ;unicode-stream/pos-xy ADD2 STA2
-
+    ( position the bitmap in the render unit, in y )
     STH2kr LObbh ADD2 LDA2 ( <- pulls both bbh and bbyoff ) ADD ToShort
     ;unicode-layout/originy LDA2 ADD2
     OVR2 #20 SFT2 ;unicode-stream/pos-xy ADD2 INC2 INC2 STA2
 
+    ( position the bitmap in the render unit, in x )
+    Unicode-layouter-position-in-x
+
 ( stack: len i glyphptr* // lbcode off* )
 
-    ( get the x advance for the glyph )
-    STH2kr     LDA ToShort
     ( advance the x of the glyphs in this render unit )
+    STH2kr     LDA ToShort
     DUP2
     ;unicode-layout/originx  LDA2k ROT2 ADD2 SWP2 STA2
     ( add up the x advance for the render unit )
     ;unicode-layout/advancex LDAk2 ROT2 ADD2 SWP2 STA2
 
-    ( get the y advance for the glyph )
-    STH2kr INC LDA ToShort
     ( advance the y of the glyphs in this render unit )
+    STH2kr INC LDA ToShort
     DUP2
     ;unicode-layout/originy  LDAk2 ROT2 ADD2 SWP2 STA2
     ( add up the y advance for the render unit )
     ;unicode-layout/advancey LDAk2 ROT2 ADD2 SWP2 STA2
 
-    #0000 ;unicode-layout/cur220y STA ;unicode-layout/cur230y STA
-
+    Unicode-layouter-zero-markoffset
 
   &done-positioning
 ( stack: len i glyphptr* // lbcode off* )
 
 
-  ( third, get the dimensions of the glyph bitmap )
+  ( third, get the dimensions of the glyph bitmap... )
   STH2kr LObbh ADD2 LDA                 ( glyph height in rows of octets )
   STH2kr LObbw ADD2 LDA #07 ADD #03 SFT ( glyph width in octets of bitmaps )
 ( stack: len i glyphptr* // lbcode off* glyph-h glyph-w )
+  ( ... and store it into the stream buffer )
   OVR2 ;unicode-stream/bbw ADD2 STA
   STH STH2k ROTr STHr STH2r
   ;unicode-stream/bbh ADD2 STA
 
   ( finally, draw the glyph )
   POP2
+  ( (well, this is the spot where we used to call ;draw...) )
 ( stack: len i glyphptr* // lbcode )
 
   POP2r
