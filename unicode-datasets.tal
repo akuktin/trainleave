@@ -1,6 +1,7 @@
 |c000
-@layouter-datasets
-  &d0 $1000
-  &d1 $1000
-  &d2 $1000
-  &d3 $1000
+@unicode-dbbuffs
+  ( some related macros are in file-access.tal )
+  &d0 $1000 ( consumer )
+  &d1 $1000 ( renderer )
+  &d2 $1000 ( unused )
+  &d3 $1000 ( unused )

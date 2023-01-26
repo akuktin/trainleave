@@ -10,17 +10,20 @@
 |b0 @FS1     [ &vector $2 &success $2 &stat $2 &delete $1 &append $1
                &name $2 &length $2 &read $2 &write $2 ]
 
+
 %CALL { JSR2 }
 %RET { JMP2r }
-%echo  { ;echo  CALL }
-%echon { ;echon CALL }
+
 %ToShort    { ;to-short CALL }
 %ToPosShort { #00 SWP }
 %ToNegShort { #ff SWP }
+
+
+%echo  { ;echo  CALL }
+%echon { ;echon CALL }
 %CR    { #0d .Console/out DEO }
 %LF    { #0a .Console/out DEO }
 %CRLF  { CR LF }
-
 %PrintA { #0a .Console/out LIT "A .Console/out DEO DEO }
 
 |0010
@@ -55,6 +58,9 @@ BRK
   ;utf8decode-octet CALL
 BRK
 
+( ---------------------------------------------------------------- )
+( -- some debug stuff )
+
 ~print-unicode.tal
 
 @print-twoshort
@@ -81,55 +87,6 @@ RET
 %PS { ;print-short CALL }
 %LL { #0a LIT "- .Console/out DEO .Console/out DEO }
 
-
-
-%unicode-stream-size { #10 } ( _MUST_ BE A POWER OF TWO! )
-%unicode-stream-mask { #0f } ( MUST BE EQU TO: unicode-stream-size #01 SUB )
-@unicode-stream [
-  ( all $ values are in hexadecimal )
-  [
-    &startx     ( start position for rendering in x )
-           0100   ( 1 * 2 )
-    &starty     ( start position for rendering in y )
-           0010   ( 1 * 2 )
-    &advancex
-             $2   ( 1 * 2 )
-    &advancey
-             $2   ( 1 * 2 )
-  ]
-  [
-    ( all of these must fit in the size of the buffer, obviously )
-    ( all of these are offsets/indexes into the array )
-    &off        ( beginning of data in buffer )
-             00   ( 1 * 1 )
-    &lead       ( number of leading whitespace in the buffer )
-             00   ( 1 * 1 )
-    &tot        ( total number of codepoints in the buffer )
-             00   ( 1 * 1 )
-  ]
-  [
-    &class      ( codepoint class )
-            $10   ( 16 * 1 )
-    &gmdoff     ( glyph metadata offset )
-    &bbw          ( doubles as the x size of the bitmap )
-            $10   ( 16 * 1 )
-    &bbh        ( y size of the bitmap )
-            $10   ( 16 * 1 )
-    &pos-xy     ( position in x and y from where to begin rendering glyph )
-            $40   ( 16 * (2*2) )
-    &bmpoff     ( bitmap offset )
-            $40   ( 16 * 4 )
-  ]
-]
-
-~file-access.tal
-~utf8-decode.tal
-~unicode-lbalgo-macros.tal
-~unicode-lbalgo.tal
-~unicode-consumer.tal
-~unicode-layouter.tal
-~unicode-renderer.tal
-
 @echo ( addr* -- ) ( null terminated strings!!! )
   LDAk #00 EQUk NIP ,&end JCN
   .Console/out DEO INC2 ,echo JMP
@@ -153,13 +110,13 @@ RET
   LIT &_dp1 27 ADD
   &print-low .Console/out DEO
   RET
-  &paren               ( surround the hexdec in parentheses )
+  &paren            ( surround the hexdec in parentheses )
   LIT "( .Console/out DEO
   ,&entry JSR
   LIT ") .Console/out DEO
   #0a .Console/out DEO
   RET
-                       ( reconfigure print-hex to print in upper or lower case )
+                    ( reconfigure print-hex to print in upper or lower case )
   &upcase   #07 DUP ,&_dp0 STR ,&_dp1 STR RET
   &downcase #27 DUP ,&_dp0 STR ,&_dp1 STR RET
 RET
@@ -172,6 +129,56 @@ RET
   &common
     SWP
 RET
+
+
+( ---------------------------------------------------------------- )
+( -- the actual code starts here )
+
+
+%unicode-stream-size { #40 } ( _MUST_ BE A POWER OF TWO! )
+%unicode-stream-mask { #3f } ( MUST BE EQU TO: unicode-stream-size #01 SUB )
+@unicode-stream [
+  ( all $ values are in hexadecimal )
+  [
+    &startx     ( start position for the render unit in x )
+           0100   ( 1 * 2 )
+    &starty     ( start position for the render unit in y )
+           0010   ( 1 * 2 )
+  ]
+  [
+    ( all of these must fit in the size of the buffer, obviously )
+    ( all of these are offsets/indexes into the array, &off from the
+      beginning of the array, the other two are *both* from &off )
+    &off        ( beginning of data in buffer )
+             00   ( 1 * 1 )
+    &lead       ( number of leading whitespace in the buffer )
+             00   ( 1 * 1 )
+    &tot        ( total number of codepoints in the buffer )
+             00   ( 1 * 1 )
+  ]
+  [
+    ( ring buffer )
+    &class      ( codepoint class )
+            $40   ( 64 * 1 )
+    &gmdoff     ( glyph metadata offset )
+    &bbw          ( doubles as the x size of the bitmap )
+            $40   ( 64 * 1 )
+    &bbh        ( y size of the bitmap )
+            $40   ( 64 * 1 )
+    &pos-xy     ( position in x and y from where to begin rendering glyph )
+           $100   ( 64 * (2*2) )
+    &bmpoff     ( bitmap offset )
+           $100   ( 64 * 4 )
+  ]
+]
+
+~file-access.tal
+~utf8-decode.tal
+~unicode-lbalgo-macros.tal
+~unicode-lbalgo.tal
+~unicode-consumer.tal
+~unicode-layouter.tal
+~unicode-renderer.tal
 
 
 ~unicode-lbalgo-map.tal

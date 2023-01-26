@@ -1,55 +1,3 @@
-%unicode-consumer-max    { #10 }
-@unicode-consumer-buf &buf $64 ( 16 * 4 ) ( maybe change to 16 * 3 ?? )
-                      &cnt 00 &wr 00
-@unicode-consumer-acceptance0 ( -- )
-( this is just a passthrought implementation to enable faster development
-  of the entire rendering pipeline )
-
-  ,unicode-consumer-buf/cnt LDR DUP unicode-consumer-max LTH ,&cont0 JCN
-    POP
-    ( signal an error - if you can! )
-  RET
-  &cont0
-    ,unicode-consumer-buf/wr LDR #00 OVR ;unicode-consumer-buf/buf ADD2
-  ( stack: cnt wr wrptr* )
-    #00 ;utf8result/high LDA OVR2 STA2
-    #0002 ADD2
-    ;utf8result/mid LDA2 SWP2 STA2
-  ( stack: cnt wr )
-    #04 ADD ,unicode-consumer-buf/wr STR
-    INC ,unicode-consumer-buf/cnt STR
-
-  ;unicode-consumer-release JMP2 ( instead of calling, just jump )
-RET
-
-@unicode-consumer-release ( -- )
-  ( by the time we get called, there is AT LEAST one codepoint )
-       ( ! not if this gets called as a flush. But we're not there yet... )
-( this is just a passthrought implementation to enable faster development
-  of the entire rendering pipeline )
-
-  ,unicode-consumer-buf/cnt LDR ;unicode-layouter CALL
-  #0000 ,unicode-consumer-buf/cnt STR2 ( speed hack? )
-
-  ( The catch is that consumer is basically, in stream mode, going to
-    accumulate codepoints until it figures out it received a codepoint
-    that is part of another render group, or the render group gets closed
-    in some other way. Thus, the buffer is always having valid data,
-    starting from 0.
-    ... This might get require copying the last codepoint from wherever it
-    is in the buffer to the beginning. Alternatively, the codepoint could
-    be examined before being put into the buffer. )
-
-  ( Theoretically, there is an option when encountering defective marks,
-    that you have to use some "surrogate space" as the base character. In
-    the unlikely event the font glyph for it is different that general
-    whitespace, I would need to move the entire buffer to accomodate.
-    Then again, if processing of codepoints is done before copying them
-    into the buffer, the consumer will realize he has a defective mark
-    sequence on it's hands and will then be able to monkeypatch this
-    replacement space base into the buffer before the mark. )
-RET
-
 @unicode-consumer ( -- )
 
 ( You will notice this one performs the font dereferencing (glyph lookup).
@@ -76,7 +24,13 @@ RET
 
   ;utf8result/high STH2k LDA STH2r INC2 LDA2
   ;code-bits CALL                              ( this is the dereference )
+  DUP2 #0000 EQU2 ,&error JCN
 ( stack: codecharptr* )
+
+  ( Hmm, maybe it would be a better idea to first fill the buffer with the
+    new character, and only then call the layouter. That would eliminate the
+    situation where two data buffers need to be held, and would basically
+    free memory for other uses... )
 
   ;unicode-stream/tot LDA
   ;unicode-stream/off LDA ADD unicode-stream-mask AND
@@ -114,6 +68,10 @@ RET
 ( stack: off* // )
   POP2r
   ;unicode-stream/tot LDAk INC ROT ROT STA
+  RET
+
+  &error
+  POP2
 RET
 
 @unicode-consumer-flush ( -- ) ( call it at eot )
@@ -129,4 +87,6 @@ RET
                                               whitespace )
   &no-display
     POP
+( stack: // )
+  ;unicode-lbalgo-reset CALL
 RET

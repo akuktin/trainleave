@@ -174,6 +174,10 @@ unifont_chars.to_a.each do |name, desc|
   codechars[name] = res
 end; nil
 
+if glyphs.join.length >= 256
+  raise "the glyphs metadata is too long!"
+end
+
 
 bitmaps.each_with_index{|bitmap,idx|
   fn=sprintf("db/bitmap.unifont.%04x", idx);

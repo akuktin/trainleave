@@ -32,8 +32,12 @@ RET
 
   DUP2
   ;unicode-stream/bmpoff ADD2
-  ;layouter-datasets/d1  SWP2
+  ;unicode-dbbuffs/d1  SWP2
   ;scroll-dataset/bitmap CALL
+    ( check the return value, for errors )
+    DUP2 #0000 NEQ2 ,&bitmap-looked-up JCN
+    POP2 POP2 POP2r RET
+  &bitmap-looked-up
   STH2r
   ROT2
 

@@ -1,5 +1,9 @@
+@unifont-bitmap-pfx   "db/bitmap.unifont. &code "0000  00
+@unifont-codechar-pfx "db/codechar.unifont &code-offset ". &code "00 00
+
+
 ( this is actually two different functions that share most of their code )
-@ready-file
+@ready-file-name
  &codechar  ( pfx -- )
   ;unifont-codechar-pfx/code-offset STH2
   ,&common JMP
@@ -21,61 +25,78 @@ RET
 
 %get-scroll-window { #1000 }
 %get-scroll-mask   { #0fff }
-@scroll-dataset
+@scroll-dataset                    ( three different functions sharing code )
+  ( for all of these functions, returning 0000 means there
+    was an error and the required spot can't be reached )
  &codechar ( buf* ptr* -- ofset-ptr* )
   STHk LDA STHr INC2 LDA2
  &codechar-direct ( buf* high low* -- ofset-ptr* ) &ccd
   ROT #30 SFT STH OVR #05 SFT STHr ORA
-  ;ready-file/codechar CALL ;unifont-codechar-pfx .FS0/name DEO2
+  ;ready-file-name/codechar CALL ;unifont-codechar-pfx .FS0/name DEO2
   #30 SFT2 ,&common JMP
  &bitmap   ( buf* ptr* -- ofset-ptr* )
-  LDA2k ;ready-file/bitmap CALL ;unifont-bitmap-pfx .FS0/name DEO2
+  LDA2k ;ready-file-name/bitmap CALL ;unifont-bitmap-pfx .FS0/name DEO2
   INC2 INC2 LDA2 &common
 
   OVR2 STH2 get-scroll-window .FS0/length DEO2
   #0000
 
   &scroll ( buf* want* am* -- ofset-ptr* )
+( stack: buf* // buf* want* am* )
     STH2kr .FS0/read DEO2
-( BUG FIXME: check FS0/success )
-    DUP2 get-scroll-window ADD2 GTH2k ,&overflow-end JCN
+
+    .FS0/success DEI2 STH2k #0000 EQU2 ,&error JCN
+( TODO: Realistically, tho, I should have some method of checking if the
+        entire object of interest has been loaded into memory. )
+
+    DUP2 STH2r ADD2 GTH2k ,&overflow-end JCN
 ( stack: buf* want* am* new-am* )
     NIP2 LTH2k ,&end JCN
     ,&scroll JMP
   &overflow-end
+    ( reaching this happens when the requested spot is in
+      the last scroll window, AND the scroll got it )
     POP2
   &end
-    POP2 get-scroll-mask AND2 ADD2 POP2r
+    POP2 get-scroll-mask AND2 ADD2 POP2r RET
+
+  &error
+    POP2r POP2r POP2 POP2 POP2 #0000
 RET
 
 @glyph-bits ( high low* -- bitmapptr* glyphptr* )
   STH2 STH
 
-( BUG FIXME currently not checking the return value of any file operations! )
-
-  ;layouter-datasets/d0
+  ;unicode-dbbuffs/d1
   STHr STH2r
   ;scroll-dataset/codechar-direct CALL
+  DUP2 #0000 EQU2 ,&error JCN
 ( stack: codechar-ptr* )
 
-  INC2 INC2 ( this second increment actually violates the datastructure, but
-              I'll probably shorten the field to 1 octet in the end, so this
-              second increment is OK so far... )
-  LDA2k
-  ;layouter-datasets/d1 ROT2 #0002 ADD2 ;scroll-dataset/bitmap CALL
+  INC2 INC2 INC2
+  LDAk ToPosShort
+  ;unicode-dbbuffs/d1 ROT2 INC2
+( stack: glyphmetadata-offset* buf* bitmapptr* )
+  ;scroll-dataset/bitmap CALL
 ( stack: glyphmetadata-offset* bitmapptr* )
+  DUP2 #0000 EQU2 ,&error2 JCN
 
   SWP2 ;unifont-glyphmetadata ADD2
+  RET
+
+  &error2
+  POP2 POP2 #0000
+  &error
+  ( don't need to change anything because the stack already only has 0000 )
 RET
 
 @code-bits ( high low* -- codecharptr* )
   STH2 STH
 
-( BUG FIXME currently not checking the return value of any file operations! )
-
-  ;layouter-datasets/d2
+  ;unicode-dbbuffs/d0
   STHr STH2r
   ;scroll-dataset/codechar-direct CALL
 ( stack: codecharptr* )
 
+  ( LOL, in case of an error, all the signalling is already set up! xD )
 RET
