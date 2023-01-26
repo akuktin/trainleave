@@ -10,10 +10,7 @@
   &pad0 $2
 ]
 )
-@unifont-glyphmetadata
-  10 00 10 00 10 fe 00 00  08 00 08 00 10 fe 00 00
-  00 04 08 00 10 fe 00 00  00 fc 08 00 10 fe 00 00
-  00 04 10 00 10 fe 00 00  00 fc 10 00 10 fe 00 00
+
 @unifont-bitmap-pfx   "db/bitmap.unifont. &code "0000  00
 @unifont-codechar-pfx "db/codechar.unifont &code-offset ". &code "00 00
 
@@ -326,23 +323,13 @@ RET
   OVR2 ;unicode-stream/bbw ADD2 STA
   ROT ROT
 ( stack: nwh len i glyphptr* // lbcode glyph-h off* )
-  ;unicode-stream/bbh ADD2 STA
+  STH2k ;unicode-stream/bbh ADD2 STA
 
-( stack: nwh len i glyphptr* // lbcode )
-(  STH2r ;unicode-stream/class ADD2 LDA )
-                                                ( WIP )
-(                                                POP #80 )
-                                                ( /WIP )
+( stack: nwh len i glyphptr* off* // lbcode )
 
-  STH2r ;unifont-glyphmetadata EQU2 ,&supress JCN
-    ( &dont-supress )
-    #80 ,&is-it-whitespace-Q JMP
-    &supress
-    #00
-    &is-it-whitespace-Q
-  #00 EQU ,&is-whitespace JCN ( ** tu bi cak mogla da se radi provera za
-                                   opciju kad je LBCode-x, tj. kad se
-                                   sve obavezno renderuje )
+  NIP2r
+  STH2r ;unicode-stream/class ADD2 LDA #80 AND
+  #80 EQU ,&is-whitespace JCN
 ( stack: nwh len i // lbcode )
   ( &is-not-whitespace )
     STHr INC NIPr STHk SWPr ;&begin JMP2

@@ -76,7 +76,7 @@ bitmap_header = [Scrolllen].pack("s>*")
 bitmaps=[bitmap_header.dup];
 bitmaps_taken=bitmap_header.length;
 glyphs=[];
-codechars = Array.new(0x10000, Array.new(8, 0).pack("c*"));
+codechars = Array.new(0x10000, Array.new(8, 0).pack("C*"));
 
 unifont_chars.to_a.each do |name, desc|
   name = /^U\+(.*)$/.match(name)[1].to_i(16);
@@ -114,9 +114,16 @@ unifont_chars.to_a.each do |name, desc|
       klass_nsmark = 0
     end
 
-    klass = klass_gc + (klass_nsmark << 5)
-
     lb_klass = point[:lb]
+
+    case lb_klass
+    when :BK, :CR, :LF, :NL, :SP, :ZW
+      supress = 0x80
+    else
+      supress = 0x00
+    end
+
+    klass = (klass_gc + (klass_nsmark << 5)) | supress
   else
     klass = 0 # means ignore this glyph
     lb_klass = :AL # technically :XX, but it gets resolved to :AL by default
@@ -124,7 +131,7 @@ unifont_chars.to_a.each do |name, desc|
 
   lb_klass = LB_AllClasses.index(lb_klass)
 
-  glyphmetadata=[dwidthx,dwidthy,bbw,bbxoff,bbh,bbyoff,0,0].pack("c*");
+  glyphmetadata=[dwidthx,dwidthy,bbw,bbxoff,bbh,bbyoff,0,0].pack("C*");
   if glyphmetadata_idx = glyphs.index{|g| g == glyphmetadata };
     nil
   else
@@ -149,7 +156,7 @@ unifont_chars.to_a.each do |name, desc|
 
   if (fitsinto_scroll && fitsinto_file)
   elsif (fitsinto_file && fitsinto_enlarged_file)
-    bitmaps[-1] << Array.new(remains_len, 0).pack("c*")
+    bitmaps[-1] << Array.new(remains_len, 0).pack("C*")
     bitmaps_taken += remains_len
   else
     bitmaps << bitmap_header.dup
@@ -161,7 +168,7 @@ unifont_chars.to_a.each do |name, desc|
 
   # klass == 0 means to ignore the glyph
   res = [klass, lb_klass, 0, glyphmetadata_offset,
-         bitmap_offset].pack("c4i>");
+         bitmap_offset].pack("C4i>");
   codechars[name] = res
 end; nil
 
@@ -176,6 +183,28 @@ bitmaps.each_with_index{|bitmap,idx|
 File.open("db/glyphmetadata.unifont.0000", 'wb'){|fh|
   fh.write(glyphs.join)
 }
+
+File.open("unicode-layouter-glyphmetadata.tal", "wb") do |fh|
+  fh.write("@unifont-glyphmetadata\n")
+
+  section_size = 16
+  glyphdata = glyphs.join.unpack("C*")
+  sections = glyphdata.length / section_size
+  if glyphdata.length > (sections * section_size)
+    sections += 1
+  end
+
+  sections.times do |i|
+    line = " "
+    line << (glyphdata[Range.new((( i    * section_size)  ),
+                                 (((i+1) * section_size)-1))].map do |num|
+               sprintf(" %02x", num)
+             end).join
+    line << "\n"
+
+    fh.write(line)
+  end
+end
 
 bunch=0x2000;
 ((codechars.length/bunch)+(((codechars.length%bunch)>0)?1:0)).times {|i|

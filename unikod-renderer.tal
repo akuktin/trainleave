@@ -175,4 +175,5 @@ RET
 
 
 ~unicode-lbalgo-map.tal
+~unicode-layouter-glyphmetadata.tal
 ~unicode-datasets.tal

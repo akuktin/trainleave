@@ -117,22 +117,16 @@ RET
 RET
 
 @unicode-consumer-flush ( -- ) ( call it at eot )
- ( !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! )
- ( !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! )
- ( !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! )
- ( !!!!!!!!!!!!!!!!!!!!!!! BROKEN !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! )
- ( !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! )
- ( !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! )
- ( !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! )
   #00
   ;unicode-stream/tot LDAk
-  STH STA STHkr
-( stack: len // len )
+  STH STA STHr
+( stack: // len )
   DUP #00 EQU ,&no-display JCN
   ( do-display )
-    LIT LBCode-E SWP ;unicode-layouter CALL
-    ;unicode-stream/off LDAk STHr ADD unicode-stream-mask AND ROT ROT STA
-    RET
+    LIT LBCode-E SWP ;unicode-layouter CALL ( when being called with LBCode-E
+                                              it's supposed to leave an empty
+                                              buffer without any leading
+                                              whitespace )
   &no-display
-    POP POPr
+    POP
 RET
