@@ -118,7 +118,7 @@ RET
 
   ;unicode-stream/lead LDA STHk SWP STH
   &begin
-  DUP STHkr LTH ;&do-a-loop JCN2
+  DUP STHkr LTH ,&do-a-loop JCN
 ( stack: nwh len // lbcode i )
     POP
 

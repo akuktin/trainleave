@@ -116,6 +116,8 @@ unifont_chars.to_a.each do |name, desc|
 
     lb_klass = point[:lb]
 
+    # realistically, the below could be calculated during runtime...
+    # it would save a bit...
     case lb_klass
     when :BK, :CR, :LF, :NL, :SP, :ZW
       supress = 0x80
