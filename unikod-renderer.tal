@@ -98,7 +98,13 @@ RET
              $2   ( 1 * 2 )
   ]
   [
-    &off        ( beginning of data in buffer ) ( must fit in the size, obv )
+    ( all of these must fit in the size of the buffer, obviously )
+    ( all of these are offsets/indexes into the array )
+    &off        ( beginning of data in buffer )
+             00   ( 1 * 1 )
+    &lead       ( number of leading whitespace in the buffer )
+             00   ( 1 * 1 )
+    &tot        ( total number of codepoints in the buffer )
              00   ( 1 * 1 )
   ]
   [

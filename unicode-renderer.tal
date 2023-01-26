@@ -3,7 +3,8 @@
 
 ( draws len^ codepoints/glyphs starting from the beginning of the buffer )
 @draw-all ( len -- len )
-  #00 ;unicode-stream/off LDA STH
+  #00
+  ;unicode-stream/off LDA STH
   &loop
     EQUk ,&end JCN
     DUP STHkr ADD unicode-stream-mask AND ToPosShort
@@ -12,7 +13,7 @@
     ,&loop JMP
 
   &end
-  POP POPr
+  POPr POP
 RET
 
 @draw ( codeoff* -- )

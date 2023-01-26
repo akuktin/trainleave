@@ -50,10 +50,6 @@ RET
     replacement space base into the buffer before the mark. )
 RET
 
-@unicode-consumer-data [
-  &cnt 00   ( how many spots are already taken )
-]
-
 @unicode-consumer ( -- )
 
 ( You will notice this one performs the font dereferencing (glyph lookup).
@@ -65,18 +61,24 @@ RET
   ( overflow protection )
   ( INC is to ensure there are always at least two open slots, this will be
     needed later for proper handling of degenerated combining mark seqs. )
-  ,unicode-consumer-data/cnt LDR INC unicode-stream-size LTH ,&process JCN
-    LIT LBCode-x
-    ,unicode-consumer-data/cnt LDR #01 SUB
+  ;unicode-stream/tot LDA INC unicode-stream-size LTH ,&process JCN
+    LIT LBCode-x ( if the render unit ends with an x, the layouter will
+                   print everything, including all leading whitespace )
+    ;unicode-stream/tot LDA #01 SUB
     ;unicode-layouter CALL
-    #01 ,unicode-consumer-data/cnt STR
+      ( ensure everything is behaving as expected )
+      #00 EQU ,&layouter-is-sane JCN
+        ( but if the layouter is insane, )
+        ( signal an error, and then... ) RET
+    &layouter-is-sane
+    #01 ;unicode-stream/tot STA
   &process
 
   ;utf8result/high STH2k LDA STH2r INC2 LDA2
   ;code-bits CALL                              ( this is the dereference )
 ( stack: codecharptr* )
 
-  ,unicode-consumer-data/cnt LDR
+  ;unicode-stream/tot LDA
   ;unicode-stream/off LDA ADD unicode-stream-mask AND
   ToPosShort STH2
 
@@ -91,8 +93,10 @@ RET
 ( stack: off* // codecharptr* lb-code )
 
   DUP LIT LBCode-x EQU ,&cont1 JCN
-    #00 ;unicode-consumer-data/cnt LDAk STH STA STHr
-    ;unicode-layouter CALL #00
+    ;unicode-stream/tot LDA
+    ;unicode-layouter CALL
+    ;unicode-stream/tot STA
+    #00 ( dummy value to sync up with the below POP )
   &cont1
   POP
 ( stack: off* // codecharptr* )
@@ -109,12 +113,19 @@ RET
 
 ( stack: off* // )
   POP2r
-  ;unicode-consumer-data/cnt LDAk INC ROT ROT STA
+  ;unicode-stream/tot LDAk INC ROT ROT STA
 RET
 
 @unicode-consumer-flush ( -- ) ( call it at eot )
+ ( !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! )
+ ( !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! )
+ ( !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! )
+ ( !!!!!!!!!!!!!!!!!!!!!!! BROKEN !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! )
+ ( !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! )
+ ( !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! )
+ ( !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! )
   #00
-  ;unicode-consumer-data/cnt LDAk
+  ;unicode-stream/tot LDAk
   STH STA STHkr
 ( stack: len // len )
   DUP #00 EQU ,&no-display JCN
