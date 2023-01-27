@@ -1,0 +1,95 @@
+Trainleave
+
+Trainleave is an implementation of Unicode on uxn/varvara. Currently
+it can be said to be in the "technology demonstrator" stage. That
+would be pre-alpha. It is able to render UTF-8 onto the screen. It
+uses the GNU Unifont font and has good or decent support for many of
+the scripts for which that font has good support. In particular,
+Arabic and South-East Asian scripts are not well supported. Trainleave
+currently doesn't have support for bidirectional scripts, like Arabic
+or Hebrew, or vertical scripts like Mongolian. Trainleave only renders
+the text, it has no provisions for scrolling throught the text nor
+editing text.
+
+# Building
+
+No automated build system is provided, and none are expected to be
+provided even when the software is finished. Instead, a numbered list
+of easy-to-follow instructions is provided.
+
+## Requirements for building
+
+1. Internet connection, for downloading assets
+2. Ruby, for running code generators
+3. Uxn
+
+## Instructions
+
+1. Check out the code, obviously
+2. Obtain a copy of GNU Unifont from URL 1 below and put it in the
+   same directory as fontconv.rb
+3. Ungzip the Unifont file
+4. Obtain the Unicode Character Database from URL 2 below
+5. Create the directory "UCD" in the same directory as fontconv.rb
+6. Unpack the Unicode Character Database into the directory "UCD" made
+   in the previous step. If successful, you should have the file
+   "UCD/LineBreak.txt"
+7. Create the directory "db" in the same directory fontconv.rb is
+8. Run fontconv.rb with Ruby
+9. Assemble unikod-renderer.tal with uxnasm
+
+Steps 1 through 7 have to be done once only. Step 8 needs to be done
+if changing the generators written in Ruby. Step 9 needs to be done if
+changing Tal. Be aware that generators from step 8 also create some
+Tal files.
+
+## URLs for assets
+
+1. http://unifoundry.com/pub/unifont/unifont-15.0.01/font-builds/unifont-15.0.01.bdf.gz
+2. https://www.unicode.org/Public/zipped/15.0.0/UCD.zip
+
+# Running
+
+Ensure the "db" directory from the step 7 is present in your current
+directory. This "db" directory holds the prepared font and Unicode
+character database. Then run the rom. As it runs, either type in the
+screen, or better copy and paste your text into the standard input of
+the interpreter.
+
+To enable the line-breaking algorithm, Trainleave holds the last
+codepoint entered until at least one more codepoint gets entered. In
+addition, rendering of text is witheld until the line-breaking
+algorithm can determine nearby break points. In principle, sending
+already composed text into the standard input and pressing "enter" ~2
+times, to flush the buffer, works best. A subroutine for flushing the
+buffers at the end of text is implemented, but unused.
+
+# Hacking
+
+Just dive into the code.
+
+# Future
+
+The author is decided to continue expanding this software until it is
+able to handle all of Unicode, using outline fonts (TrueType and the
+like). Support for any particular script's quirks is not guaranteed
+due to the extensive amount of intimate knowledge required - but will
+be attempted eventually. The ultimate goal for this particular project
+is to be available as a library that can be included in your project
+(the author presupposes source code inclusion due to platform
+limitations).
+
+Expected time for completion of mayor work is 2024-01-01. Success is
+not guaranteed.
+
+# Contact
+
+The author can be reached by email at ak@triklod.rs
+
+# Legal
+
+Trainleave Copyright (C) 2023 Aleksandar Kuktin
+
+This software is licensed to you under the terms of the GNU GENERAL
+PUBLIC LICENSE Version 3, as present in the file COPYING and on the
+World Wide Web at http://www.gnu.org/licenses/ .
